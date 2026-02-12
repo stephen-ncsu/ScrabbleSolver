@@ -18,6 +18,7 @@ namespace ScrabbleSolver
         const int CC_STAT_AREA = 4;
         int errorCount = 0;
         Scalar[] colors = new Scalar[5];
+        List<Mat> errorImages = new List<Mat>();
 
         public Form1()
         {
@@ -34,6 +35,11 @@ namespace ScrabbleSolver
 
         private void OnButtonClick(object sender, EventArgs e)
         {
+            // Clear previous error images and close windows
+            foreach (var img in errorImages) img.Dispose();
+            errorImages.Clear();
+            Cv2.DestroyAllWindows();
+
             errorCount = 0;
             string imagePath = @"D:\Users\steph\Downloads\scrabble_board.png";
 
@@ -55,6 +61,7 @@ namespace ScrabbleSolver
             }
 
             DisplayScrabbleBoard(boardState, output);
+            ShowErrorMontage();
         }
 
         private Mat LoadAndValidateImage(string imagePath)
@@ -255,18 +262,25 @@ namespace ScrabbleSolver
 
                 // 3. Create a clean mask with ONLY the isolated letter
                 using (Mat cleanTile = CreateLetterMask(thresh, labels, bestLabel))
-                using (Mat final = PrepareImageForOcr(cleanTile))
                 {
-                    // 5. Execute OCR
-                    string text = ExecuteOcr(final);
+                    // INVERT IMAGE: Tesseract needs Black Text on White Background.
+                    // cleanTile is White Text on Black Background.
+                    // We must invert the center content before adding the white border.
+                    Cv2.BitwiseNot(cleanTile, cleanTile);
 
-                    if (string.IsNullOrEmpty(text))
+                    using (Mat final = PrepareImageForOcr(cleanTile))
                     {
-                        errorCount++;
-                        VisualizeDebugInfo(cell, thresh, stats, nLabels, text);
-                    }
+                        // 5. Execute OCR
+                        string text = ExecuteOcr(final);
 
-                    return string.IsNullOrEmpty(text) ? "?" : text.Substring(0, 1);
+                        if (string.IsNullOrEmpty(text))
+                        {
+                            errorCount++;
+                            VisualizeDebugInfo(cell, thresh, stats, nLabels, text);
+                        }
+
+                        return string.IsNullOrEmpty(text) ? "?" : text.Substring(0, 1);
+                    }
                 }
             }
         }
@@ -367,7 +381,7 @@ namespace ScrabbleSolver
             using (Mat paddedThresh = new Mat())
             {
                 int margin = 30;
-                Cv2.CopyMakeBorder(thresh, paddedThresh, margin, margin, margin, margin, BorderTypes.Constant, Scalar.Black);
+                Cv2.CopyMakeBorder(thresh, paddedThresh, margin, margin, margin, margin, BorderTypes.Constant, Scalar.White);
                 Cv2.CvtColor(paddedThresh, visualDebug, ColorConversionCodes.GRAY2BGR);
 
                 for (int i = 1; i < nLabels; i++)
@@ -383,7 +397,34 @@ namespace ScrabbleSolver
                 }
 
                 Cv2.Resize(visualDebug, visualDebug, new OpenCvSharp.Size(400, 400));
-                Cv2.ImShow("Visual Stats - " + windowName + " Blob Count - " + nLabels, visualDebug);
+                errorImages.Add(visualDebug.Clone());
+            }
+        }
+
+        private void ShowErrorMontage()
+        {
+            if (errorImages.Count == 0) return;
+
+            int imgWidth = 400;
+            int imgHeight = 400;
+            int count = errorImages.Count;
+
+            // Calculate grid size (approx square)
+            int cols = (int)Math.Ceiling(Math.Sqrt(count));
+            int rows = (int)Math.Ceiling((double)count / cols);
+
+            using (Mat montage = new Mat(rows * imgHeight, cols * imgWidth, MatType.CV_8UC3, Scalar.Black))
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    int r = i / cols;
+                    int c = i % cols;
+
+                    Rect roi = new Rect(c * imgWidth, r * imgHeight, imgWidth, imgHeight);
+                    errorImages[i].CopyTo(new Mat(montage, roi));
+                }
+
+                Cv2.ImShow("All Errors", montage);
             }
         }
 
