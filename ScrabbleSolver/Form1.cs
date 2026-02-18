@@ -125,8 +125,8 @@ namespace ScrabbleSolver
             using (Mat boardOnly = new Mat(inputImage, boardRect))
             using (Mat resizedBoard = new Mat())
             {
-                Cv2.Resize(boardOnly, resizedBoard, new OpenCvSharp.Size(750, 750));
-                return CropToTightBoard(resizedBoard);
+                //Cv2.Resize(boardOnly, resizedBoard, new OpenCvSharp.Size(750, 750));
+                return CropToTightBoard(boardOnly);
             }
         }
 
@@ -160,7 +160,7 @@ namespace ScrabbleSolver
                 using (Mat tightBoard = new Mat(resizedBoard, boardArea))
                 {
                     Mat finalBoard = new Mat();
-                    Cv2.Resize(tightBoard, finalBoard, new OpenCvSharp.Size(720, 720));
+                    Cv2.Resize(tightBoard, finalBoard, new OpenCvSharp.Size(1215, 1215));
                     return finalBoard;
                 }
             }
@@ -168,7 +168,9 @@ namespace ScrabbleSolver
 
         private void ProcessBoardCells(Mat processedBoard)
         {
-            const int cellSize = 48; // 720 / 15
+            int cellSize = 81; // 720 / 15
+            int cellPadding = 4;
+
 
             VisualGridCalibration(processedBoard, cellSize);
 
@@ -189,7 +191,7 @@ namespace ScrabbleSolver
             {
                 if (IsTilePresent(cell))
                 {
-                    string detected = RunOCR(cell);
+                    string detected = RunOCR(cell, row, col);
                     boardState[row, col] = string.IsNullOrEmpty(detected) ? '?' : detected[0];
                 }
                 else
@@ -205,6 +207,63 @@ namespace ScrabbleSolver
             int rows = 15;
             int cols = 15;
 
+            //List<OpenCvSharp.Scalar> colors = new List<OpenCvSharp.Scalar> { Scalar.Red, Scalar.Green, Scalar.Blue, Scalar.Yellow, Scalar.Purple };
+            //int colorCount = 0;
+            //for (int i=45; i<50; i++)
+            //{
+            //    if (i % 2 == 0)
+            //    {
+            //        var leftPoint = new OpenCvSharp.Point(0, i);
+            //        var rightPoint = new OpenCvSharp.Point(720, i);
+            //        Cv2.Line(calibrationView, leftPoint, rightPoint, colors[colorCount], 1);
+            //        colorCount++;
+            //        if(colorCount > 4)
+            //        {
+            //            colorCount = 0;
+            //        }
+            //    }
+            //}
+
+            //for (int y = 0; y <= rows; y++)
+            //{
+            //    var bottomOfCell = y * cellSize + (y - 1) * cellPadding;
+            //    var leftPoint = new OpenCvSharp.Point(0, bottomOfCell);
+            //    var rightPoint = new OpenCvSharp.Point(cols * cellSize + ((cols - 1) * cellPadding), bottomOfCell);
+            //    // Draw Horizontal Lines
+            //    Cv2.Line(calibrationView, leftPoint, rightPoint, Scalar.Red, 1);
+
+
+            //    var topOfNextRow = y * cellSize + (y) * cellPadding;
+            //    var leftPointOfNextRow = new OpenCvSharp.Point(0, topOfNextRow);
+            //    var rightPointOfNextRow = new OpenCvSharp.Point(cols * cellSize + ((cols - 1) * cellPadding), topOfNextRow);
+
+            //    Cv2.Line(calibrationView, leftPointOfNextRow, rightPointOfNextRow, Scalar.Blue, 1);
+            //}
+
+            //for (int x = 0; x <= cols; x++)
+            //{
+            //    var leftOfCell = x * cellSize + (x - 1) * cellPadding;
+            //    var topPoint = new OpenCvSharp.Point(leftOfCell, 0);
+            //    var bottomPoint = new OpenCvSharp.Point(leftOfCell, rows * cellSize + ((rows - 1) * cellPadding));
+            //    // Draw Vertical Lines
+            //    Cv2.Line(calibrationView, topPoint, bottomPoint, Scalar.Green, 1);
+
+
+            //    var leftOfNextCell = x * cellSize + (x) * cellPadding;
+            //    var topOfNextRow = new OpenCvSharp.Point(leftOfNextCell, 0);
+            //    var bottomOfNextRow = new OpenCvSharp.Point(leftOfNextCell, rows * cellSize + ((rows - 1) * cellPadding));
+
+            //    Cv2.Line(calibrationView, topOfNextRow, bottomOfNextRow, Scalar.Purple, 1);
+            //}
+
+            //for (int x = 0; x <= cols; x++)
+            //{
+            //    // Draw Vertical Lines
+            //    var topPoint = new OpenCvSharp.Point(x * cellSize, 0);
+            //    var bottomPoint = new OpenCvSharp.Point(x * cellSize, rows * cellSize);
+            //    Cv2.Line(calibrationView, topPoint, bottomPoint, Scalar.Red, 1);
+            //}
+
             for (int y = 0; y <= rows; y++)
             {
                 // Draw Horizontal Lines
@@ -217,6 +276,7 @@ namespace ScrabbleSolver
                 Cv2.Line(calibrationView, new OpenCvSharp.Point(x * cellSize, 0), new OpenCvSharp.Point(x * cellSize, rows * cellSize), Scalar.Red, 1);
             }
 
+            Cv2.Resize(calibrationView, calibrationView, new OpenCvSharp.Size(1200, 1200));
             Cv2.ImShow("Calibration - Check if Red Grid matches Tiles", calibrationView);
         }
 
@@ -242,14 +302,8 @@ namespace ScrabbleSolver
             }
         }
 
-        string RunOCR(Mat cell, bool debug = false)
-        {
-            if (debug)
-            {
-                Cv2.ImShow("Debug - Original Cell " + Guid.NewGuid(), cell);
-                Cv2.WaitKey(1);
-            }
-
+        string RunOCR(Mat cell, int row, int column)
+        {            
             using (Mat thresh = PreprocessCell(cell))
             using (Mat labels = new Mat())
             using (Mat stats = new Mat())
@@ -257,6 +311,13 @@ namespace ScrabbleSolver
             {
                 // 2. ISOLATE THE BOTTOM-LEFT CHARACTER
                 int nLabels = Cv2.ConnectedComponentsWithStats(thresh, labels, stats, centroids);
+
+                // First, check if this looks like an 'I' character
+                string possibleI = CheckForICharacter(thresh, labels, stats, centroids, nLabels);
+                if (!string.IsNullOrEmpty(possibleI))
+                {
+                    return possibleI;
+                }
 
                 int bestLabel = FindBestLetterBlob(thresh, nLabels, stats, centroids);
 
@@ -273,10 +334,11 @@ namespace ScrabbleSolver
                         // 5. Execute OCR
                         string text = ExecuteOcr(final);
 
+
                         if (string.IsNullOrEmpty(text))
                         {
                             errorCount++;
-                            VisualizeDebugInfo(cell, thresh, stats, nLabels, text);
+                            VisualizeDebugInfo(final, stats, nLabels, text, row, column);
                         }
 
                         return string.IsNullOrEmpty(text) ? "?" : text.Substring(0, 1);
@@ -285,18 +347,99 @@ namespace ScrabbleSolver
             }
         }
 
+        private Mat FillInteriorHoles(Mat mask)
+        {
+            Mat result = mask.Clone();
+
+            // Create a temporary image that's 2 pixels larger in each dimension
+            using (Mat temp = Mat.Zeros(mask.Rows + 2, mask.Cols + 2, MatType.CV_8UC1))
+            {
+                // Copy the original mask to the center of the temporary image
+                using (Mat roi = new Mat(temp, new Rect(1, 1, mask.Cols, mask.Rows)))
+                {
+                    mask.CopyTo(roi);
+                }
+
+                // Flood fill from the border - this fills all the background connected to edges
+                Cv2.FloodFill(temp, new OpenCvSharp.Point(0, 0), new Scalar(255));
+
+                // Extract the result (excluding the 1-pixel border we added)
+                using (Mat borderFilled = new Mat(temp, new Rect(1, 1, mask.Cols, mask.Rows)))
+                {
+                    // Invert the flood-filled result to get the holes
+                    Mat holes = new Mat();
+                    Cv2.BitwiseNot(borderFilled, holes);
+
+                    // Combine the original mask with the filled holes
+                    Cv2.BitwiseOr(mask, holes, result);
+
+                    holes.Dispose();
+                }
+            }
+
+            return result;
+        }
+
+        private string CheckForICharacter(Mat thresh, Mat labels, Mat stats, Mat centroids, int nLabels)
+        {
+            // Look for tall, narrow blobs that could be 'I'
+            for (int i = 1; i < nLabels; i++)
+            {
+                int width = stats.At<int>(i, CC_STAT_WIDTH);
+                int height = stats.At<int>(i, CC_STAT_HEIGHT);
+                int area = stats.At<int>(i, CC_STAT_AREA);
+                double blobCenterX = centroids.At<double>(i, 0);
+                double blobCenterY = centroids.At<double>(i, 1);
+
+                // Check if blob is in the target area
+                int targetMinX = 0;
+                int targetMaxX = (int)(thresh.Width * 0.70);
+                int targetMinY = (int)(thresh.Height * 0.30);
+                int targetMaxY = thresh.Height;
+
+                if (blobCenterX >= targetMinX && blobCenterX <= targetMaxX &&
+                    blobCenterY >= targetMinY && blobCenterY <= targetMaxY)
+                {
+
+                    double aspectRatio = (double)width / height;
+
+                    // 'I' characteristics based on BLOB dimensions, not full image:
+                    // - Very narrow (low aspect ratio)
+                    // - Tall relative to the available vertical space in the cell
+                    // - Reasonable area (not just noise)
+                    if (aspectRatio < 0.5 &&                    // Very narrow
+                        height > 10 &&                          // Minimum height in pixels
+                        height > (thresh.Height * 0.4) &&       // At least 40% of cell height
+                        area > 8 &&                             // Minimum area to avoid noise
+                        width >= 2 &&                           // Must be at least 2 pixels wide
+                        width <= 11)                             // But not too wide
+                    {
+                        return "I";
+                    }
+                }
+            }
+            return null;
+        }
+
         private Mat PreprocessCell(Mat cell)
         {
-            Rect roi = new Rect(5, 17, 28, 31);
+            Rect roi = new Rect(8, 15, 55, 66);
             Mat thresh = new Mat();
 
             using (Mat croppedTop = new Mat(cell, roi))
             using (Mat gray = new Mat())
-            using (Mat kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new OpenCvSharp.Size(2, 2)))
             {
                 Cv2.CvtColor(croppedTop, gray, ColorConversionCodes.BGR2GRAY);
                 Cv2.Threshold(gray, thresh, 120, 255, ThresholdTypes.BinaryInv);
-                Cv2.MorphologyEx(thresh, thresh, MorphTypes.Close, kernel);
+
+                Cv2.BitwiseNot(thresh, thresh);
+
+                // Use smaller, more conservative morphological operations
+                using (Mat kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new OpenCvSharp.Size(1, 2)))
+                {
+                    // Gentler closing that won't destroy thin vertical lines
+                    Cv2.MorphologyEx(thresh, thresh, MorphTypes.Close, kernel);
+                }
             }
             return thresh;
         }
@@ -333,11 +476,13 @@ namespace ScrabbleSolver
         private Mat CreateLetterMask(Mat thresh, Mat labels, int bestLabel)
         {
             Mat cleanTile = Mat.Zeros(thresh.Size(), MatType.CV_8UC1);
+
             if (bestLabel != -1)
             {
                 var indexer = labels.GetGenericIndexer<int>();
                 var cleanIndexer = cleanTile.GetGenericIndexer<byte>();
 
+                // First, add the main blob
                 for (int y = 0; y < labels.Height; y++)
                 {
                     for (int x = 0; x < labels.Width; x++)
@@ -348,7 +493,14 @@ namespace ScrabbleSolver
                         }
                     }
                 }
+
+                // Now fill any holes inside the letter using flood fill
+                using (Mat filledMask = FillInteriorHoles(cleanTile))
+                {
+                    filledMask.CopyTo(cleanTile);
+                }
             }
+
             return cleanTile;
         }
 
@@ -356,7 +508,8 @@ namespace ScrabbleSolver
         {
             Mat final = new Mat();
             Cv2.CopyMakeBorder(cleanTile, final, 40, 40, 40, 40, BorderTypes.Constant, Scalar.White);
-            Cv2.Resize(final, final, new OpenCvSharp.Size(400, 400));
+            //Cv2.Resize(final, final, new OpenCvSharp.Size(400, 400));
+            
             return final;
         }
 
@@ -373,7 +526,7 @@ namespace ScrabbleSolver
             }
         }
 
-        private void VisualizeDebugInfo(Mat cell, Mat thresh, Mat stats, int nLabels, string text)
+        private void VisualizeDebugInfo(Mat thresh, Mat stats, int nLabels, string text, int row, int column)
         {
             var windowName = String.IsNullOrEmpty(text) ? errorCount.ToString() : text;
 
@@ -394,6 +547,17 @@ namespace ScrabbleSolver
                     Scalar color = colors[i % colors.Length];
                     Cv2.Rectangle(visualDebug, new Rect(x, y, w, h), color, 1);
                     Cv2.PutText(visualDebug, $"ID:{i}", new OpenCvSharp.Point(x, y - 5), HersheyFonts.HersheySimplex, 0.4, color, 1);
+                }
+
+                Cv2.PutText(visualDebug, "Row " + row + " Column " + column, new OpenCvSharp.Point(10, 40), HersheyFonts.HersheySimplex, 0.6, Scalar.Purple, 2);
+
+                if (String.IsNullOrEmpty(text) == false)
+                {
+                    Cv2.PutText(visualDebug, "OCR Succeed", new OpenCvSharp.Point(10, 20), HersheyFonts.HersheySimplex, 0.6, Scalar.Green, 2);
+                }
+                else
+                {
+                    Cv2.PutText(visualDebug, "OCR Failed", new OpenCvSharp.Point(10, 20), HersheyFonts.HersheySimplex, 0.6, Scalar.Red, 2);
                 }
 
                 Cv2.Resize(visualDebug, visualDebug, new OpenCvSharp.Size(400, 400));
@@ -425,109 +589,6 @@ namespace ScrabbleSolver
                 }
 
                 Cv2.ImShow("All Errors", montage);
-            }
-        }
-
-        string RunOCR_new(Mat cell, bool debug = false)
-        {
-            using (Mat gray = new Mat())
-            using (Mat thresh = new Mat())
-            using (Mat labels = new Mat())
-            using (Mat stats = new Mat())
-            using (Mat centroids = new Mat())
-            {
-                // 1. CROP & PRE-PROCESS
-                // Using your specific ROI to isolate the letter area
-                Rect roi = new Rect(5, 17, 28, 31);
-                using (Mat croppedTop = new Mat(cell, roi))
-                {
-                    Cv2.CvtColor(croppedTop, gray, ColorConversionCodes.BGR2GRAY);
-                }
-
-                Cv2.Threshold(gray, thresh, 120, 255, ThresholdTypes.BinaryInv);
-
-                // Clean noise (Opening: Erode then Dilate)
-                using (Mat kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new OpenCvSharp.Size(2, 2)))
-                {
-                    Cv2.MorphologyEx(thresh, thresh, MorphTypes.Open, kernel);
-                }
-
-                // 2. ISOLATE BLOBS
-                int nLabels = Cv2.ConnectedComponentsWithStats(thresh, labels, stats, centroids);
-                int bestLabel = -1;
-                double maxArea = 0;
-
-                // Target Zone (Bottom-Left logic)
-                int targetMaxX = (int)(thresh.Width * 0.70);
-                int targetMinY = (int)(thresh.Height * 0.30);
-
-                for (int i = 1; i < nLabels; i++)
-                {
-                    double blobCenterX = centroids.At<double>(i, 0);
-                    double blobCenterY = centroids.At<double>(i, 1);
-                    int area = stats.At<int>(i, 4);
-
-                    if (blobCenterX < targetMaxX && blobCenterY > targetMinY)
-                    {
-                        if (area > maxArea)
-                        {
-                            maxArea = area;
-                            bestLabel = i;
-                        }
-                    }
-                }
-
-                if (bestLabel == -1) return "?";
-
-                // 3. FORCE "I" BY ASPECT RATIO
-                int w = stats.At<int>(bestLabel, 2);
-                int h = stats.At<int>(bestLabel, 3);
-                double aspectRatio = (double)w / h;
-                if (aspectRatio < 0.4 && h > (thresh.Height * 0.5)) return "I";
-
-                // 4. CREATE CLEAN MASK & FILL HOLES (The "O" Fix)
-                Mat letterMask = new Mat();
-                Cv2.Compare(labels, new Scalar(bestLabel), letterMask, CmpType.EQ);
-
-                // Flood fill holes to make 'O', 'D', 'Q' solid
-                using (Mat floodFilled = letterMask.Clone())
-                {
-                    Cv2.FloodFill(floodFilled, new OpenCvSharp.Point(0, 0), new Scalar(255));
-                    Cv2.BitwiseNot(floodFilled, floodFilled); // Isolate the holes
-                    Cv2.BitwiseOr(letterMask, floodFilled, letterMask); // Merge holes into letter
-                }
-
-                // 5. INVERT & PAD (Prepare for OCR)
-                Mat final = new Mat();
-                Cv2.BitwiseNot(letterMask, final); // Convert to Black Letter on White Background
-
-                // Add 40px white border and resize
-                Cv2.CopyMakeBorder(final, final, 40, 40, 40, 40, BorderTypes.Constant, Scalar.White);
-                Cv2.Resize(final, final, new OpenCvSharp.Size(400, 400));
-
-                // 6. EXECUTE OCR
-                var ocr = new IronTesseract();
-                ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleChar;
-                ocr.Configuration.WhiteListCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-                using (var input = new IronSoftware.Drawing.AnyBitmap(final.ToMemoryStream()))
-                {
-                    Cv2.ImShow(Guid.NewGuid().ToString(), final);
-                    var result = ocr.Read(input);
-                    string text = result?.Text?.Trim().ToUpper() ?? "";
-
-                    if (string.IsNullOrEmpty(text))
-                    {
-                        errorCount++;
-                        if (debug)
-                        {
-                            // Your existing debug visual stats logic here...
-                            // Using visualDebug and drawing the rectangles
-                        }
-                    }
-
-                    return string.IsNullOrEmpty(text) ? "?" : text.Substring(0, 1);
-                }
             }
         }
 
