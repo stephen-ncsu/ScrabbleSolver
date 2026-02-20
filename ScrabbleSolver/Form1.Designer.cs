@@ -34,6 +34,8 @@
             label1 = new Label();
             label2 = new Label();
             threshold2TextBox = new TextBox();
+            button2 = new Button();
+            openFileDialog1 = new OpenFileDialog();
             SuspendLayout();
             // 
             // button1
@@ -42,18 +44,18 @@
             button1.Name = "button1";
             button1.Size = new Size(75, 23);
             button1.TabIndex = 0;
-            button1.Text = "button1";
+            button1.Text = "Analyze";
             button1.UseVisualStyleBackColor = true;
             button1.Click += OnButtonClick;
             // 
             // output
             // 
+            output.Font = new Font("Consolas", 10F);
             output.Location = new Point(12, 12);
             output.Name = "output";
             output.Size = new Size(776, 347);
             output.TabIndex = 1;
             output.Text = "";
-            output.Font = new Font("Consolas", 10);
             // 
             // threshold1TextBox
             // 
@@ -70,7 +72,6 @@
             label1.Size = new Size(69, 15);
             label1.TabIndex = 3;
             label1.Text = "Threshold 1";
-            label1.Click += label1_Click;
             // 
             // label2
             // 
@@ -88,11 +89,26 @@
             threshold2TextBox.Size = new Size(100, 23);
             threshold2TextBox.TabIndex = 4;
             // 
+            // button2
+            // 
+            button2.Location = new Point(632, 829);
+            button2.Name = "button2";
+            button2.Size = new Size(75, 23);
+            button2.TabIndex = 6;
+            button2.Text = "Browse";
+            button2.UseVisualStyleBackColor = true;
+            button2.Click += BrowseClick;
+            // 
+            // openFileDialog1
+            // 
+            openFileDialog1.FileName = "openFileDialog";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 864);
+            Controls.Add(button2);
             Controls.Add(label2);
             Controls.Add(threshold2TextBox);
             Controls.Add(label1);
@@ -113,5 +129,7 @@
         private Label label1;
         private Label label2;
         private TextBox threshold2TextBox;
+        private Button button2;
+        private OpenFileDialog openFileDialog1;
     }
 }
