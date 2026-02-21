@@ -1,3 +1,6 @@
+using IronSoftware;
+using Serilog;
+
 namespace ScrabbleSolver
 {
     internal static class Program
@@ -8,6 +11,7 @@ namespace ScrabbleSolver
         [STAThread]
         static void Main()
         {
+            Serilog.Log.Logger = new LoggerConfiguration().WriteTo.File("log.txt", rollingInterval: RollingInterval.Day).CreateLogger();
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();

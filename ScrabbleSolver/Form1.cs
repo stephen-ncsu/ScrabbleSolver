@@ -9,12 +9,13 @@ namespace ScrabbleSolver
 {
     public partial class Form1 : Form
     {
-        char[,] boardState = new char[15, 15];
+        char[,] _boardState = new char[15, 15];
+        List<Move> _moves = new List<Move>();
 
-        int errorCount = 0;
+        int _errorCount = 0;
 
 
-        string fileName = @"D:\Users\steph\Downloads\scrabble_board.png";
+        string _fileName = @"D:\Users\steph\Downloads\scrabble_board.png";
 
         public Form1()
         {
@@ -29,10 +30,10 @@ namespace ScrabbleSolver
             var imagePrep = new ImagePrep();
 
             Cv2.DestroyAllWindows();
-            errorCount = 0;
-            boardState = imagePrep.Run(fileName);
+            _errorCount = 0;
+            _boardState = imagePrep.Run(_fileName);
 
-            DisplayScrabbleBoard(boardState, output);
+            DisplayScrabbleBoard(_boardState, output);
         }
 
         public void DisplayScrabbleBoard(char[,] boardState, RichTextBox outputTextBox)
@@ -71,7 +72,7 @@ namespace ScrabbleSolver
                 sb.AppendLine();
             }
 
-            sb.AppendLine("Error Count : " + errorCount); // Bottom border
+            sb.AppendLine("Error Count : " + _errorCount); // Bottom border
 
             // 3. Output to TextBox (Ensure TextBox Font is set to 'Courier New' or 'Consolas')
             outputTextBox.Text = sb.ToString();
@@ -79,9 +80,29 @@ namespace ScrabbleSolver
 
         private void BrowseClick(object sender, EventArgs e)
         {
-            if(openFileDialog1.ShowDialog() == DialogResult.OK)
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                fileName = openFileDialog1.FileName;
+                _fileName = openFileDialog1.FileName;
+            }
+        }
+
+        private void SolveClick(object sender, EventArgs e)
+        {
+            var solver = new Solver(_boardState);
+            _moves = solver.Solve();
+
+            DisplayScrabbleBoard(_moves.FirstOrDefault().GetBoardState(), movesTextBox);
+        }
+
+        private void showMove_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                DisplayScrabbleBoard(_moves[Convert.ToInt32(moveId.Text)].GetBoardState(), movesTextBox);
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Invalid move index. Please enter a valid number corresponding to a move.");
             }
         }
     }

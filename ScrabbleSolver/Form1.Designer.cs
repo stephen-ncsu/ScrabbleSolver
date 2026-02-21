@@ -36,11 +36,15 @@
             threshold2TextBox = new TextBox();
             button2 = new Button();
             openFileDialog1 = new OpenFileDialog();
+            button3 = new Button();
+            movesTextBox = new RichTextBox();
+            showMove = new Button();
+            moveId = new TextBox();
             SuspendLayout();
             // 
             // button1
             // 
-            button1.Location = new Point(713, 829);
+            button1.Location = new Point(632, 829);
             button1.Name = "button1";
             button1.Size = new Size(75, 23);
             button1.TabIndex = 0;
@@ -91,7 +95,7 @@
             // 
             // button2
             // 
-            button2.Location = new Point(632, 829);
+            button2.Location = new Point(551, 829);
             button2.Name = "button2";
             button2.Size = new Size(75, 23);
             button2.TabIndex = 6;
@@ -103,11 +107,51 @@
             // 
             openFileDialog1.FileName = "openFileDialog";
             // 
+            // button3
+            // 
+            button3.Location = new Point(713, 829);
+            button3.Name = "button3";
+            button3.Size = new Size(75, 23);
+            button3.TabIndex = 7;
+            button3.Text = "Solve";
+            button3.UseVisualStyleBackColor = true;
+            button3.Click += SolveClick;
+            // 
+            // movesTextBox
+            // 
+            movesTextBox.Font = new Font("Consolas", 10F);
+            movesTextBox.Location = new Point(12, 437);
+            movesTextBox.Name = "movesTextBox";
+            movesTextBox.Size = new Size(776, 386);
+            movesTextBox.TabIndex = 8;
+            movesTextBox.Text = "";
+            // 
+            // showMove
+            // 
+            showMove.Location = new Point(713, 407);
+            showMove.Name = "showMove";
+            showMove.Size = new Size(75, 23);
+            showMove.TabIndex = 9;
+            showMove.Text = "Show Move";
+            showMove.UseVisualStyleBackColor = true;
+            showMove.Click += showMove_Click;
+            // 
+            // moveId
+            // 
+            moveId.Location = new Point(666, 408);
+            moveId.Name = "moveId";
+            moveId.Size = new Size(41, 23);
+            moveId.TabIndex = 10;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 864);
+            Controls.Add(moveId);
+            Controls.Add(showMove);
+            Controls.Add(movesTextBox);
+            Controls.Add(button3);
             Controls.Add(button2);
             Controls.Add(label2);
             Controls.Add(threshold2TextBox);
@@ -131,5 +175,9 @@
         private TextBox threshold2TextBox;
         private Button button2;
         private OpenFileDialog openFileDialog1;
+        private Button button3;
+        private RichTextBox movesTextBox;
+        private Button showMove;
+        private TextBox moveId;
     }
 }
