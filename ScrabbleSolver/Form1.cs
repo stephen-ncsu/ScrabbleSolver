@@ -91,6 +91,9 @@ namespace ScrabbleSolver
             var solver = new Solver(_boardState);
             _moves = solver.Solve();
 
+            var scorer = new Scorer();
+            scorer.GetScoreForMove(_moves.FirstOrDefault());
+
             DisplayScrabbleBoard(_moves.FirstOrDefault().GetBoardState(), movesTextBox);
         }
 

@@ -33,5 +33,14 @@ namespace ScrabbleSolver
             Left,
             Right
         }
+
+        public enum ScoreModifier
+        {
+            None,
+            DoubleWord,
+            TripleWord,
+            DoubleLetter,
+            TripleLetter
+        }
     }
 }

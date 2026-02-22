@@ -10,18 +10,19 @@ namespace ScrabbleSolver
 {
     public class Solver
     {
-        char[,] _board = null;
-        List<string> _baseWords = null;
+        Move _baseMove = null;
         List<Move> _possibleMoves = new List<Move>();
         int _maxNumberOfMoves = 100;
 
         HashSet<string> _dictionary = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> _validSubstrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> _invalidSubstrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private List<List<char>> _allPermutations;
         private List<char> _impossibleLetters = new List<char>();
 
         public Solver(char[,] board)
         {
-            _board = board;
+            _baseMove = new Move(board);
             _dictionary = System.IO.File.ReadAllLines("scrabble-dictionary.csv").ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -38,14 +39,14 @@ namespace ScrabbleSolver
                 '*'
             };
 
-            _baseWords = FindWords(_board);
-            List<char> usableCharacters = FindChars(_baseWords, remainingLetters);
+            var baseWords = _baseMove.FindWords();
+            List<char> usableCharacters = FindChars(baseWords, remainingLetters);
 
             _dictionary = _dictionary.Where(word => word.All(c => usableCharacters.Contains(c))).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            Serilog.Log.Logger.Information("Found words: " + String.Join(',', _baseWords.ToArray()));
-            var errorWords = ValidateWords(_baseWords);
-            Serilog.Log.Logger.Information("Error words: " + String.Join(',', errorWords.ToArray()));
+            Serilog.Log.Logger.Information("Found words: " + String.Join(',', baseWords.Select(x=>x.Text).ToArray()));
+            var errorWords = ValidateWords(baseWords);
+            Serilog.Log.Logger.Information("Error words: " + String.Join(',', errorWords.Select(x=>x.Text).ToArray()));
 
 
             _allPermutations = GenerateUniquePermutations(remainingLetters);
@@ -87,9 +88,9 @@ namespace ScrabbleSolver
             _impossibleLetters = new List<char>();
             foreach (var letter in letters)
             {
-                var testMove = new Move(_board.Duplicate());
+                var testMove = new Move(_baseMove.GetBoardState().Duplicate());
                 testMove.AddNewLetter(letter, row, col);
-                var words = FindWords(testMove.GetBoardState());
+                var words = testMove.FindWords();
                 if (ValidateWordSubstring(words) == false)
                 {
                     _impossibleLetters.Add(letter);
@@ -97,12 +98,12 @@ namespace ScrabbleSolver
             }
         }
 
-        private List<char> FindChars(List<string> words, List<char> letters)
+        private List<char> FindChars(List<Word> words, List<char> letters)
         {
             var result = new List<char>();
             foreach(var word in words)
             {
-                var charList = word.Select(x => x).Distinct().ToList();
+                var charList = word.Text.Select(x => x).Distinct().ToList();
                 result.AddRange(charList);
             }
 
@@ -112,59 +113,12 @@ namespace ScrabbleSolver
 
         }
 
-        private List<string> FindWords(char[,] board)
-        {
-            List<string> words = new List<string>();
-            for (int row = 0; row < 15; row++)
-            {
-                for (int col = 0; col < 15; col++)
-                {
-                    char tile = board[row, col];
-                    if (tile != ' ')
-                    {
-                        // Check horizontally
-                        if (col == 0 || board[row, col - 1] == ' ')
-                        {
-                            StringBuilder wordBuilder = new StringBuilder();
-                            int c = col;
-                            while (c < 15 && board[row, c] != ' ')
-                            {
-                                wordBuilder.Append(board[row, c]);
-                                c++;
-                            }
-                            string word = wordBuilder.ToString();
-                            if (word.Length > 1)
-                            {
-                                words.Add(word);
-                            }
-                        }
-                        // Check vertically
-                        if (row == 0 || board[row - 1, col] == ' ')
-                        {
-                            StringBuilder wordBuilder = new StringBuilder();
-                            int r = row;
-                            while (r < 15 && board[r, col] != ' ')
-                            {
-                                wordBuilder.Append(board[r, col]);
-                                r++;
-                            }
-                            string word = wordBuilder.ToString();
-                            if (word.Length > 1)
-                            {
-                                words.Add(word);
-                            }
-                        }
-                    }
-                }
-            }
 
-            return words;
-        }
 
-        private List<string> ValidateWords(List<string> words)
+        private List<Word> ValidateWords(List<Word> words)
         {
             return words.AsParallel()
-                        .Where(word => !_dictionary.Contains(word))
+                        .Where(word => !_dictionary.Contains(word.Text))
                         .ToList();
         }
 
@@ -175,7 +129,7 @@ namespace ScrabbleSolver
             {
                 for (int col = 0; col < 15; col++)
                 {
-                    positions[row, col] = IsPositionPlayable(_board, row, col);
+                    positions[row, col] = IsPositionPlayable(_baseMove.GetBoardState(), row, col);
                 }
             }
 
@@ -215,22 +169,22 @@ namespace ScrabbleSolver
 
             List<Enums.Direction> availableDirections = new List<Enums.Direction>();
 
-            if(IsPositionPlayable(_board, startingRow + 1, startingColumn) == 1)
+            if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow + 1, startingColumn) == 1)
             {
                 availableDirections.Add(Enums.Direction.Down);
             }
 
-            if(IsPositionPlayable(_board, startingRow - 1, startingColumn) == 1)
+            if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow - 1, startingColumn) == 1)
             {
                 availableDirections.Add(Enums.Direction.Up);
             }
 
-            if (IsPositionPlayable(_board, startingRow, startingColumn + 1) == 1)
+            if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn + 1) == 1)
             {
                 availableDirections.Add(Enums.Direction.Right);
             }
 
-            if (IsPositionPlayable(_board, startingRow, startingColumn - 1) == 1)
+            if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn - 1) == 1)
             {
                 availableDirections.Add(Enums.Direction.Left);
             }
@@ -277,10 +231,10 @@ namespace ScrabbleSolver
 
         private Move GenerateMove(List<char> letters, int startingRow, int startingColumn, Enums.Direction direction, int skipCounter)
         {
-            var testBoard = _board.Duplicate();
+            var testMove = new Move(_baseMove.GetBoardState().Duplicate());
             int currentRow = startingRow;
             int currentColumn = startingColumn;
-            var newMove = new Move(testBoard);
+
             //generate moves for letter set at position
             foreach (var letter in letters)
             {
@@ -289,16 +243,16 @@ namespace ScrabbleSolver
                     return null;
                 }
 
-                newMove.AddNewLetter(letter, currentRow, currentColumn);
+                testMove.AddNewLetter(letter, currentRow, currentColumn);
 
-                if (ValidateWordSubstring(FindWords(testBoard)))
+                if (ValidateWordSubstring(testMove.FindWords()))
                 {
-                    if (ValidateWords(FindWords(testBoard)).Any() == false)
+                    if (ValidateWords(testMove.FindWords()).Any() == false)
                     {
                         if (skipCounter == 0)
                         {
                             //first valid move, return it
-                            return newMove;
+                            return testMove;
                         }
                         else
                         {
@@ -309,28 +263,28 @@ namespace ScrabbleSolver
                     switch (direction)
                     {
                         case Enums.Direction.Up:
-                            if (IsPositionPlayable(testBoard, currentRow - 1, currentColumn) == 1)
+                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow - 1, currentColumn) == 1)
                             {
                                 currentRow--;
                                 continue;
                             }
                             break;
                         case Enums.Direction.Down:
-                            if (IsPositionPlayable(testBoard, currentRow + 1, currentColumn) == 1)
+                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow + 1, currentColumn) == 1)
                             {
                                 currentRow++;
                                 continue;
                             }
                             break;
                         case Enums.Direction.Left:
-                            if (IsPositionPlayable(testBoard, currentRow, currentColumn - 1) == 1)
+                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn - 1) == 1)
                             {
                                 currentColumn--;
                                 continue;
                             }
                             break;
                         case Enums.Direction.Right:
-                            if (IsPositionPlayable(testBoard, currentRow, currentColumn + 1) == 1)
+                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn + 1) == 1)
                             {
                                 currentColumn++;
                                 continue;
@@ -372,23 +326,57 @@ namespace ScrabbleSolver
         //    return true;
         //}
 
-        private bool ValidateWordSubstring(List<string> words)
+        private bool ValidateWordSubstring(List<Word> words)
         {
-            if (_baseWords != null)
-            {
-                var newWords = words.Except(_baseWords);
+            var newWords = words.Except(_baseMove.FindWords());
 
-                return newWords.AsParallel().All(word =>
-                    _dictionary.Any(dictItem => dictItem.Length > word.Length && dictItem.Contains(word))
-                );
-            }
-            else
+            var substringValidated = newWords.AsParallel().All(word => _validSubstrings.Any(dictItem => dictItem == word.Text));
+
+            if(substringValidated == false)
             {
-                // All must match the condition (All returns false immediately if one fails)
-                return words.AsParallel().All(word =>
-                    _dictionary.Any(dictItem => dictItem.Length > word.Length && dictItem.Contains(word))
-                );
+                if(newWords.AsParallel().Any(word => _invalidSubstrings.Any(dictItem => dictItem == word.Text)))
+                {
+                    return false;
+                }
             }
+
+            if(substringValidated == false)
+            {
+                var unvalidatedSubstrings = newWords.Where(word => _validSubstrings.Any(dictItem => dictItem.Length > word.Text.Length && dictItem.Contains(word.Text)) == false);
+
+                foreach(var unvalidatedSubstring in unvalidatedSubstrings)
+                {
+                    if (_validSubstrings.Any(dictItem => dictItem == unvalidatedSubstring.Text) == false)
+                    {
+                        if (_dictionary.Any(x => x.Contains(unvalidatedSubstring.Text)))
+                        {
+                            if (_validSubstrings.Contains(unvalidatedSubstring.Text) == false)
+                            {
+                                _validSubstrings.Add(unvalidatedSubstring.Text);
+                            }
+                        }
+                        else
+                        {
+                            if (_invalidSubstrings.Contains(unvalidatedSubstring.Text) == false)
+                            {
+                                _invalidSubstrings.Add(unvalidatedSubstring.Text);
+                            }
+
+                            return false;
+                        }
+                    }
+                }
+
+                substringValidated = true;
+
+                //var fullDictValidated = newWords.AsParallel().FirstOrDefault(word => _dictionary.Any(dictItem => dictItem.Length > word.Text.Length && dictItem.Contains(word.Text)));
+            }
+
+            return substringValidated;
+
+//            return newWords.AsParallel().All(word =>
+//    _dictionary.Any(dictItem => dictItem.Length > word.Text.Length && dictItem.Contains(word.Text))
+//);
         }
 
 
