@@ -15,7 +15,7 @@ namespace ScrabbleSolver
         int _errorCount = 0;
 
 
-        string _fileName = @"D:\Users\steph\Downloads\scrabble_board.png";
+        string _fileName = @".\TestData\scrabble_board.png";
 
         public Form1()
         {
@@ -91,10 +91,20 @@ namespace ScrabbleSolver
             var solver = new Solver(_boardState);
             _moves = solver.Solve();
 
+            Move bestMove = null;
             var scorer = new Scorer();
-            scorer.GetScoreForMove(_moves.FirstOrDefault());
+            foreach(var move in _moves)
+            {
+                move.Score = scorer.GetScoreForMove(move);
 
-            DisplayScrabbleBoard(_moves.FirstOrDefault().GetBoardState(), movesTextBox);
+                if (bestMove == null || move.Score > bestMove.Score)
+                {
+                    Serilog.Log.Information("New best move found with score {Score}" , move.Score);
+                    bestMove = move;
+                }
+            }
+
+            DisplayScrabbleBoard(bestMove.GetBoardState(), movesTextBox);
         }
 
         private void showMove_Click(object sender, EventArgs e)

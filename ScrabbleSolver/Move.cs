@@ -14,10 +14,12 @@ namespace ScrabbleSolver
 
         public Move(char[,] boardState)
         {
-            _boardState = boardState;
-            _initialBoardState = boardState;
+            _boardState = boardState.Duplicate();
+            _initialBoardState = boardState.Duplicate();
             _changedPositions = new List<Tuple<char, int, int>>();
         }
+
+        public int Score { get; set; }
 
         public char[,] GetBoardState()
         {
@@ -140,7 +142,7 @@ namespace ScrabbleSolver
             var newWords = FindWords(_boardState);
 
 
-            return newWords.Except(oldWords).ToList();
+            return newWords.Except(oldWords, new WordComparer()).ToList();
         }
 
         public bool AreCharArraysEqual(char[,] array1, char[,] array2)

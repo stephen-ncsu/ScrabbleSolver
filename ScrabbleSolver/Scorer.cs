@@ -63,6 +63,7 @@ namespace ScrabbleSolver
 
         public int GetScoreForMove(Move move)
         {
+            int score = 0;
             var boardState = move.GetBoardState();
             var newWords = move.FindNewWords();
             var changedPositions = move.GetChangedPositions();
@@ -70,42 +71,48 @@ namespace ScrabbleSolver
             foreach(var newWord in newWords)
             {
                 int wordMultiplier = 1;
-                List<int> letterMultiplier = new List<int>();
-                foreach(var wordPosition in newWord.Positions)
+                Dictionary<int, Enums.ScoreModifier> letterMultiplier = new Dictionary<int, Enums.ScoreModifier>();
+                int letterIndex = 0;
+                foreach (var wordPosition in newWord.Positions)
                 {
-                    var changedPositionsWithinWord = changedPositions.Where(x => x.Item2 == wordPosition.Item2 && x.Item3 == wordPosition.Item3);
+                    var positionOfNewLetter = changedPositions.SingleOrDefault(x => x.Item2 == wordPosition.Item2 && x.Item3 == wordPosition.Item3);
+                    
+                    Enums.ScoreModifier scoringModifier = Enums.ScoreModifier.None;
 
-                    foreach(var changedPositionWithinWord in changedPositionsWithinWord)
+                    if (positionOfNewLetter != null)
                     {
-                        var scoringModifier = scoringBoard[changedPositionWithinWord.Item2, changedPositionWithinWord.Item3];
-                        switch (scoringModifier)
-                        {
-                            case Enums.ScoreModifier.TripleWord:
-                                wordMultiplier = wordMultiplier * 3;
-                                letterMultiplier.Add(1);
-                                break;
-                            case Enums.ScoreModifier.DoubleWord:
-                                wordMultiplier = wordMultiplier * 2;
-                                letterMultiplier.Add(1);
-                                break;
-                            case Enums.ScoreModifier.TripleLetter:
-                                letterMultiplier.Add(2);
-                                break;
-                            case Enums.ScoreModifier.DoubleLetter:
-                                letterMultiplier.Add(2);
-                                break;
-                            default:
-                                letterMultiplier.Add(1);
-                                break;
-                        }
+                        scoringModifier = scoringBoard[positionOfNewLetter.Item2, positionOfNewLetter.Item3];
                     }
+
+                    switch (scoringModifier)
+                    {
+                        case Enums.ScoreModifier.TripleWord:
+                            wordMultiplier = wordMultiplier * 3;
+                            letterMultiplier.Add(letterIndex, Enums.ScoreModifier.TripleLetter);
+                            break;
+                        case Enums.ScoreModifier.DoubleWord:
+                            wordMultiplier = wordMultiplier * 2;
+                            letterMultiplier.Add(letterIndex, Enums.ScoreModifier.DoubleWord);
+                            break;
+                        case Enums.ScoreModifier.TripleLetter:
+                            letterMultiplier.Add(letterIndex, Enums.ScoreModifier.TripleWord);
+                            break;
+                        case Enums.ScoreModifier.DoubleLetter:
+                            letterMultiplier.Add(letterIndex, Enums.ScoreModifier.DoubleLetter);
+                            break;
+                        default:
+                            letterMultiplier.Add(letterIndex, Enums.ScoreModifier.None);
+                            break;
+                    }
+
+                    letterIndex++;
+
                 }
 
-
-
+                score += newWord.GetPointValue(letterMultiplier, _letterValues);
             }
 
-            return 1;
+            return score;
         }
     }
 }

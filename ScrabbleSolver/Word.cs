@@ -63,4 +63,32 @@ namespace ScrabbleSolver
 
         }
     }
+
+    public class WordComparer : IEqualityComparer<Word>
+    {
+        public bool Equals(Word x, Word y)
+        {
+            // Check for nulls and compare properties
+            if (ReferenceEquals(x, y)) return true;
+            if (ReferenceEquals(x, null) || ReferenceEquals(y, null)) return false;
+
+            return x.Positions.Select(p => p.Item2).SequenceEqual(y.Positions.Select(p => p.Item2)) && x.Positions.Select(p => p.Item3).SequenceEqual(y.Positions.Select(p => p.Item3));
+        }
+
+        public int GetHashCode(Word obj)
+        {
+            if (obj == null) return 0;
+
+            var hash = new HashCode();
+
+            // Loop through the same data you use in Equals
+            foreach (var pos in obj.Positions)
+            {
+                hash.Add(pos.Item2);
+                hash.Add(pos.Item3);
+            }
+
+            return hash.ToHashCode();
+        }
+    }
 }
