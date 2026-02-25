@@ -333,11 +333,13 @@ namespace ScrabbleSolver
         {
             var newWords = words.Except(_baseWords);
 
-            var substringValidated = newWords.All(word => _validSubstrings.Any(dictItem => dictItem == word.Text));
+            // Optimization: Use HashSet.Contains() instead of LINQ Any() for O(1) lookups
+            var substringValidated = newWords.All(word => _validSubstrings.Contains(word.Text));
 
             if(substringValidated == false)
             {
-                if(newWords.Any(word => _invalidSubstrings.Any(dictItem => dictItem == word.Text)))
+                // Optimization: Use HashSet.Contains() directly instead of nested LINQ Any()
+                if(newWords.Any(word => _invalidSubstrings.Contains(word.Text)))
                 {
                     return false;
                 }
@@ -345,22 +347,24 @@ namespace ScrabbleSolver
 
             if(substringValidated == false)
             {
-                var unvalidatedSubstrings = newWords.Where(word => _validSubstrings.Any(dictItem => dictItem.Length > word.Text.Length && dictItem.Contains(word.Text)) == false);
+                // Optimization: Filter using HashSet.Contains() which is O(1) vs O(n) for Any()
+                var unvalidatedSubstrings = newWords.Where(word => !_validSubstrings.Contains(word.Text));
 
                 foreach(var unvalidatedSubstring in unvalidatedSubstrings)
                 {
-                    if (_validSubstrings.Any(dictItem => dictItem == unvalidatedSubstring.Text) == false)
+                    // Optimization: Direct Contains() check instead of LINQ Any()
+                    if (!_validSubstrings.Contains(unvalidatedSubstring.Text))
                     {
                         if (_allSubstringsIndex.Contains(unvalidatedSubstring.Text))
                         {
-                            if (_validSubstrings.Contains(unvalidatedSubstring.Text) == false)
+                            if (!_validSubstrings.Contains(unvalidatedSubstring.Text))
                             {
                                 _validSubstrings.Add(unvalidatedSubstring.Text);
                             }
                         }
                         else
                         {
-                            if (_invalidSubstrings.Contains(unvalidatedSubstring.Text) == false)
+                            if (!_invalidSubstrings.Contains(unvalidatedSubstring.Text))
                             {
                                 _invalidSubstrings.Add(unvalidatedSubstring.Text);
                             }
