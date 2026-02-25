@@ -70,7 +70,6 @@ namespace ScrabbleSolver
 
             foreach(var newWord in newWords)
             {
-                int wordMultiplier = 1;
                 Dictionary<int, Enums.ScoreModifier> letterMultiplier = new Dictionary<int, Enums.ScoreModifier>();
                 int letterIndex = 0;
                 foreach (var wordPosition in newWord.Positions)
@@ -84,27 +83,7 @@ namespace ScrabbleSolver
                         scoringModifier = scoringBoard[positionOfNewLetter.Item2, positionOfNewLetter.Item3];
                     }
 
-                    switch (scoringModifier)
-                    {
-                        case Enums.ScoreModifier.TripleWord:
-                            wordMultiplier = wordMultiplier * 3;
-                            letterMultiplier.Add(letterIndex, Enums.ScoreModifier.TripleLetter);
-                            break;
-                        case Enums.ScoreModifier.DoubleWord:
-                            wordMultiplier = wordMultiplier * 2;
-                            letterMultiplier.Add(letterIndex, Enums.ScoreModifier.DoubleWord);
-                            break;
-                        case Enums.ScoreModifier.TripleLetter:
-                            letterMultiplier.Add(letterIndex, Enums.ScoreModifier.TripleWord);
-                            break;
-                        case Enums.ScoreModifier.DoubleLetter:
-                            letterMultiplier.Add(letterIndex, Enums.ScoreModifier.DoubleLetter);
-                            break;
-                        default:
-                            letterMultiplier.Add(letterIndex, Enums.ScoreModifier.None);
-                            break;
-                    }
-
+                    letterMultiplier.Add(letterIndex, scoringModifier);
                     letterIndex++;
 
                 }

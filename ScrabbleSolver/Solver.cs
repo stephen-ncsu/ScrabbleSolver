@@ -26,7 +26,7 @@ namespace ScrabbleSolver
         {
             _baseMove = new Move(board);
             _remainingLetters = rack.ToCharArray().ToList();
-            _dictionary = System.IO.File.ReadAllLines("scrabble-dictionary.csv").ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _dictionary = System.IO.File.ReadAllLines("myDictionary.txt").ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
         public List<Move> Solve()

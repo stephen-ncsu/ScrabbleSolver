@@ -42,11 +42,12 @@
             moveId = new TextBox();
             updateBoardButton = new Button();
             rackTextBox = new TextBox();
+            calculateButton = new Button();
             SuspendLayout();
             // 
             // button1
             // 
-            button1.Location = new Point(632, 829);
+            button1.Location = new Point(551, 829);
             button1.Name = "button1";
             button1.Size = new Size(75, 23);
             button1.TabIndex = 0;
@@ -97,7 +98,7 @@
             // 
             // button2
             // 
-            button2.Location = new Point(551, 829);
+            button2.Location = new Point(470, 829);
             button2.Name = "button2";
             button2.Size = new Size(75, 23);
             button2.TabIndex = 6;
@@ -111,7 +112,7 @@
             // 
             // button3
             // 
-            button3.Location = new Point(713, 829);
+            button3.Location = new Point(632, 829);
             button3.Name = "button3";
             button3.Size = new Size(75, 23);
             button3.TabIndex = 7;
@@ -162,11 +163,22 @@
             rackTextBox.Size = new Size(354, 23);
             rackTextBox.TabIndex = 12;
             // 
+            // calculateButton
+            // 
+            calculateButton.Location = new Point(713, 829);
+            calculateButton.Name = "calculateButton";
+            calculateButton.Size = new Size(75, 23);
+            calculateButton.TabIndex = 13;
+            calculateButton.Text = "Calculate";
+            calculateButton.UseVisualStyleBackColor = true;
+            calculateButton.Click += calculateButton_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 864);
+            Controls.Add(calculateButton);
             Controls.Add(rackTextBox);
             Controls.Add(updateBoardButton);
             Controls.Add(moveId);
@@ -202,5 +214,6 @@
         private TextBox moveId;
         private Button updateBoardButton;
         private TextBox rackTextBox;
+        private Button calculateButton;
     }
 }

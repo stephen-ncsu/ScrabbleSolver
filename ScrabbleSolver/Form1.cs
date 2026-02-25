@@ -28,7 +28,7 @@ namespace ScrabbleSolver
 
         private void OnButtonClick(object sender, EventArgs e)
         {
-            var rackImagePrep= new RackImagePrep();
+            var rackImagePrep = new RackImagePrep();
             var rackResult = rackImagePrep.Run(_fileName);
             rackTextBox.Text = new string(rackResult);
             var imagePrep = new BoardImagePrep();
@@ -99,23 +99,7 @@ namespace ScrabbleSolver
             stopWatch.Stop();
             Serilog.Log.Logger.Information("Solver found {MoveCount} moves in {ElapsedMilliseconds} ms", _moves.Count, stopWatch.ElapsedMilliseconds);
 
-            Move bestMove = null;
-            var scorer = new Scorer();
-            foreach (var move in _moves)
-            {
-                move.Score = scorer.GetScoreForMove(move);
-
-                if (bestMove == null || move.Score > bestMove.Score)
-                {
-                    Serilog.Log.Information("New best move found with score {Score}", move.Score);
-                    bestMove = move;
-                }
-            }
-
-            DisplayScrabbleBoard(bestMove.GetBoardState(), movesTextBox);
-
-            movesTextBox.Text += $"\nBest Move Score: {bestMove.Score}";
-            movesTextBox.Text += "\nChanged Positions: " + string.Join(", ", bestMove.GetChangedPositions().Select(pos => $"{pos.Item1} at ({pos.Item2 + 1}, {pos.Item3 + 1})"));
+            movesTextBox.Text = $"Found {_moves.Count} moves in {stopWatch.Elapsed.TotalSeconds}s.";
         }
 
         private void showMove_Click(object sender, EventArgs e)
@@ -193,6 +177,32 @@ namespace ScrabbleSolver
             {
                 MessageBox.Show($"Error updating board state: {ex.Message}");
             }
+        }
+
+        private void calculateButton_Click(object sender, EventArgs e)
+        {
+            var scorer = new Scorer();
+            foreach (var move in _moves)
+            {
+                move.Score = scorer.GetScoreForMove(move);
+            }
+
+
+            if (_moves.Any() != null)
+            {
+                _moves = _moves.OrderByDescending(m => m.Score).ToList();
+                DisplayScrabbleBoard(_moves[0].GetBoardState(), movesTextBox);
+
+                moveId.Text = "0";
+                movesTextBox.Text += $"\nBest Move Score: {_moves[0].Score}";
+                movesTextBox.Text += "\nChanged Positions: " + string.Join(", ", _moves[0].GetChangedPositions().Select(pos => $"{pos.Item1} at ({pos.Item2 + 1}, {pos.Item3 + 1})"));
+            }
+            else
+            {
+                movesTextBox.Text += "\nNo valid moves found.";
+            }
+
+
         }
     }
 }
