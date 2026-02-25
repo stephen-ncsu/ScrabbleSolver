@@ -5,3 +5,9 @@
 /.vs
 /ScrabbleSolver/bin/Debug/net8.0-windows
 /ScrabbleSolver/obj
+/Scrabble/bin/Debug/net10.0
+/Scrabble/obj
+/ScrabbleSolver/bin/Debug/net10.0-windows7.0
+/ScrabbleUIWPF/bin/Debug/net10.0-windows7.0
+/ScrabbleUIWPF/obj/Debug/net10.0-windows7.0
+/ScrabbleUIWPF/obj
