@@ -33,6 +33,7 @@ namespace ScrabbleSolver
 
         public void AddNewLetter(char letter, int row, int col)
         {
+            _dirtyCache = true;
             _boardState[row, col] = letter;
 
             _changedPositions.Add(new Tuple<char, int, int>(letter, row, col));
@@ -76,9 +77,40 @@ namespace ScrabbleSolver
             return true;
         }
 
+        public override bool Equals(object obj)
+        {
+            if (obj == null || GetType() != obj.GetType())
+                return false;
+
+            return AreMovesEqual((Move)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (var position in _changedPositions)
+                {
+                    hash = hash * 31 + position.Item1.GetHashCode();
+                    hash = hash * 31 + position.Item2.GetHashCode();
+                    hash = hash * 31 + position.Item3.GetHashCode();
+                }
+                return hash;
+            }
+        }
+
+        private List<Word> _wordCache = null;
+        bool _dirtyCache = true;
         public List<Word> FindWords()
         {
-            return FindWords(GetBoardState());
+            if(_wordCache == null || _dirtyCache)
+            {
+                _wordCache = FindWords(GetBoardState());
+                _dirtyCache = false;
+            }
+            
+            return _wordCache;
         }
 
         public List<Word> FindWords(char[,] board)

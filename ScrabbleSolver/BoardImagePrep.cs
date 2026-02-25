@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace ScrabbleSolver
 {
-    public class ImagePrep
+    public class BoardImagePrep
     {
         private char[,] _boardState = new char[15, 15];
 
@@ -455,7 +455,7 @@ namespace ScrabbleSolver
                         string text = _ocr.ExecuteOcr(final);
 
 
-                        if (string.IsNullOrEmpty(text) || text == "N")
+                        if (string.IsNullOrEmpty(text))
                         {
                             VisualizeDebugInfo(final, stats, nLabels, text, row, column);
                         }

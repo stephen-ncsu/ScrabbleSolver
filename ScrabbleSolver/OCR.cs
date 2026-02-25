@@ -256,7 +256,7 @@ namespace ScrabbleSolver
             int imgHeight = firstImage.Height;
             int count = ErrorImages.Count;
 
-            Console.WriteLine($"Using image dimensions: {imgWidth}x{imgHeight}");
+            Serilog.Log.Information($"Using image dimensions: {imgWidth}x{imgHeight}");
 
             // Calculate grid size
             int cols = (int)Math.Ceiling(Math.Sqrt(count));

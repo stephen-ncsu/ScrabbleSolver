@@ -40,6 +40,8 @@
             movesTextBox = new RichTextBox();
             showMove = new Button();
             moveId = new TextBox();
+            updateBoardButton = new Button();
+            rackTextBox = new TextBox();
             SuspendLayout();
             // 
             // button1
@@ -73,7 +75,7 @@
             label1.AutoSize = true;
             label1.Location = new Point(12, 382);
             label1.Name = "label1";
-            label1.Size = new Size(69, 15);
+            label1.Size = new Size(68, 15);
             label1.TabIndex = 3;
             label1.Text = "Threshold 1";
             // 
@@ -82,7 +84,7 @@
             label2.AutoSize = true;
             label2.Location = new Point(12, 411);
             label2.Name = "label2";
-            label2.Size = new Size(69, 15);
+            label2.Size = new Size(68, 15);
             label2.TabIndex = 5;
             label2.Text = "Threshold 2";
             // 
@@ -143,11 +145,30 @@
             moveId.Size = new Size(41, 23);
             moveId.TabIndex = 10;
             // 
+            // updateBoardButton
+            // 
+            updateBoardButton.Location = new Point(713, 365);
+            updateBoardButton.Name = "updateBoardButton";
+            updateBoardButton.Size = new Size(75, 23);
+            updateBoardButton.TabIndex = 11;
+            updateBoardButton.Text = "Update Board";
+            updateBoardButton.UseVisualStyleBackColor = true;
+            updateBoardButton.Click += updateBoardButton_Click;
+            // 
+            // rackTextBox
+            // 
+            rackTextBox.Location = new Point(232, 365);
+            rackTextBox.Name = "rackTextBox";
+            rackTextBox.Size = new Size(354, 23);
+            rackTextBox.TabIndex = 12;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 864);
+            Controls.Add(rackTextBox);
+            Controls.Add(updateBoardButton);
             Controls.Add(moveId);
             Controls.Add(showMove);
             Controls.Add(movesTextBox);
@@ -179,5 +200,7 @@
         private RichTextBox movesTextBox;
         private Button showMove;
         private TextBox moveId;
+        private Button updateBoardButton;
+        private TextBox rackTextBox;
     }
 }

@@ -12,35 +12,28 @@ namespace ScrabbleSolver
     {
         Move _baseMove = null;
         List<Move> _possibleMoves = new List<Move>();
-        int _maxNumberOfMoves = 100;
 
         HashSet<string> _dictionary = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         HashSet<string> _validSubstrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         HashSet<string> _invalidSubstrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private List<List<char>> _allPermutations;
         private List<char> _impossibleLetters = new List<char>();
+        private HashSet<string> _allSubstringsIndex;
+        private List<Word> _baseWords;
+        private List<char> _remainingLetters;
 
-        public Solver(char[,] board)
+        public Solver(char[,] board, string rack)
         {
             _baseMove = new Move(board);
+            _remainingLetters = rack.ToCharArray().ToList();
             _dictionary = System.IO.File.ReadAllLines("scrabble-dictionary.csv").ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
         public List<Move> Solve()
         {
-            List<char> remainingLetters = new List<char>()
-            {
-                'N',
-                'N',
-                'M',
-                'A',
-                'F',
-                'R',
-                '*'
-            };
-
             var baseWords = _baseMove.FindWords();
-            List<char> usableCharacters = FindChars(baseWords, remainingLetters);
+            _baseWords = baseWords;
+            HashSet<char> usableCharacters = FindChars(baseWords, _remainingLetters);
 
             _dictionary = _dictionary.Where(word => word.All(c => usableCharacters.Contains(c))).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -48,8 +41,11 @@ namespace ScrabbleSolver
             var errorWords = ValidateWords(baseWords);
             Serilog.Log.Logger.Information("Error words: " + String.Join(',', errorWords.Select(x=>x.Text).ToArray()));
 
+            Serilog.Log.Logger.Information("Building substring index from dictionary...");
+            _allSubstringsIndex = BuildSubstringIndex(_dictionary);
+            Serilog.Log.Logger.Information($"Substring index built successfully with {_allSubstringsIndex.Count} entries.");
 
-            _allPermutations = GenerateUniquePermutations(remainingLetters);
+            _allPermutations = GenerateUniquePermutations(_remainingLetters);
 
             //List<object> possibleMoves = new List<object>();
             var playablePositions = GetPlayablePositions();
@@ -62,14 +58,10 @@ namespace ScrabbleSolver
                     if (playablePositions[i, j] == 1)
                     {
                         stopwatch.Restart();
-                        DetectImpossibleLetters(remainingLetters, i, j);
-                        if (_maxNumberOfMoves <= _possibleMoves.Count)
-                        {
-                            break;
-                        }
+                        DetectImpossibleLetters(_remainingLetters, i, j);
 
                         var newMoves = GenerateMoves(i, j);
-
+                        
                         if(newMoves.Any())
                         {
                             _possibleMoves.AddRange(newMoves);
@@ -98,28 +90,57 @@ namespace ScrabbleSolver
             }
         }
 
-        private List<char> FindChars(List<Word> words, List<char> letters)
+        private HashSet<char> FindChars(List<Word> words, List<char> letters)
         {
-            var result = new List<char>();
+            var result = new HashSet<char>();
             foreach(var word in words)
             {
-                var charList = word.Text.Select(x => x).Distinct().ToList();
-                result.AddRange(charList);
+                foreach(var c in word.Text)
+                {
+                    result.Add(c);
+                }
             }
 
-            result.AddRange(letters);
+            foreach(var letter in letters)
+            {
+                result.Add(letter);
+            }
 
-            return result.Distinct().ToList();
+            return result;
+        }
 
+        private HashSet<string> BuildSubstringIndex(HashSet<string> dictionary)
+        {
+            var substrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var word in dictionary)
+            {
+                for (int i = 0; i < word.Length; i++)
+                {
+                    for (int len = 1; len <= word.Length - i; len++)
+                    {
+                        substrings.Add(word.Substring(i, len));
+                    }
+                }
+            }
+
+            return substrings;
         }
 
 
 
         private List<Word> ValidateWords(List<Word> words)
         {
-            return words.AsParallel()
-                        .Where(word => !_dictionary.Contains(word.Text))
-                        .ToList();
+            if (words.Count > 100)
+            {
+                return words.AsParallel()
+                            .Where(word => !_dictionary.Contains(word.Text))
+                            .ToList();
+            }
+            else
+            {
+                return words.Where(word => !_dictionary.Contains(word.Text)).ToList();
+            }
         }
 
         private int[,] GetPlayablePositions()
@@ -193,11 +214,6 @@ namespace ScrabbleSolver
             {
                 foreach (var permutation in _allPermutations)
                 {
-                    if (_maxNumberOfMoves <= moves.Count)
-                    {
-                        break;
-                    }
-
                     int skipCounter = 0;
                     do
                     {
@@ -205,21 +221,7 @@ namespace ScrabbleSolver
 
                         if (newMove != null)
                         {
-                            bool duplicate = false;
-                            foreach(var move in moves)
-                            {
-                                if(move.AreMovesEqual(newMove))
-                                {
-                                    duplicate = true;
-                                    break;
-                                }
-                            }
-
-                            if(duplicate == false)
-                            {
-                                moves.Add(newMove);
-                            }
-                            
+                            moves.Add(newMove);
                             skipCounter++;
                         }
                     } while (newMove != null);
@@ -245,9 +247,10 @@ namespace ScrabbleSolver
 
                 testMove.AddNewLetter(letter, currentRow, currentColumn);
 
-                if (ValidateWordSubstring(testMove.FindWords()))
+                var currentWords = testMove.FindWords();
+                if (ValidateWordSubstring(currentWords))
                 {
-                    if (ValidateWords(testMove.FindWords()).Any() == false)
+                    if (ValidateWords(currentWords).Any() == false)
                     {
                         if (skipCounter == 0)
                         {
@@ -328,13 +331,13 @@ namespace ScrabbleSolver
 
         private bool ValidateWordSubstring(List<Word> words)
         {
-            var newWords = words.Except(_baseMove.FindWords());
+            var newWords = words.Except(_baseWords);
 
-            var substringValidated = newWords.AsParallel().All(word => _validSubstrings.Any(dictItem => dictItem == word.Text));
+            var substringValidated = newWords.All(word => _validSubstrings.Any(dictItem => dictItem == word.Text));
 
             if(substringValidated == false)
             {
-                if(newWords.AsParallel().Any(word => _invalidSubstrings.Any(dictItem => dictItem == word.Text)))
+                if(newWords.Any(word => _invalidSubstrings.Any(dictItem => dictItem == word.Text)))
                 {
                     return false;
                 }
@@ -348,7 +351,7 @@ namespace ScrabbleSolver
                 {
                     if (_validSubstrings.Any(dictItem => dictItem == unvalidatedSubstring.Text) == false)
                     {
-                        if (_dictionary.Any(x => x.Contains(unvalidatedSubstring.Text)))
+                        if (_allSubstringsIndex.Contains(unvalidatedSubstring.Text))
                         {
                             if (_validSubstrings.Contains(unvalidatedSubstring.Text) == false)
                             {
