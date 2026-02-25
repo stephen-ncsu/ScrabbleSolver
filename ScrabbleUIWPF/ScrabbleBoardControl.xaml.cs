@@ -9,34 +9,39 @@ namespace ScrabbleUIWPF
         private TextBox[,] _tileTextBoxes = new TextBox[15, 15];
         private static readonly Dictionary<string, string> _specialSquares = new Dictionary<string, string>
         {
-            // Triple Word Score (Red)
-            {"0,0", "TW"}, {"0,7", "TW"}, {"0,14", "TW"},
-            {"7,0", "TW"}, {"7,14", "TW"},
-            {"14,0", "TW"}, {"14,7", "TW"}, {"14,14", "TW"},
-            
-            // Double Word Score (Pink)
-            {"1,1", "DW"}, {"2,2", "DW"}, {"3,3", "DW"}, {"4,4", "DW"},
-            {"1,13", "DW"}, {"2,12", "DW"}, {"3,11", "DW"}, {"4,10", "DW"},
-            {"13,1", "DW"}, {"12,2", "DW"}, {"11,3", "DW"}, {"10,4", "DW"},
-            {"13,13", "DW"}, {"12,12", "DW"}, {"11,11", "DW"}, {"10,10", "DW"},
-            
-            // Triple Letter Score (Blue)
-            {"1,5", "TL"}, {"1,9", "TL"},
-            {"5,1", "TL"}, {"5,5", "TL"}, {"5,9", "TL"}, {"5,13", "TL"},
-            {"9,1", "TL"}, {"9,5", "TL"}, {"9,9", "TL"}, {"9,13", "TL"},
-            {"13,5", "TL"}, {"13,9", "TL"},
-            
-            // Double Letter Score (Light Blue)
-            {"0,3", "DL"}, {"0,11", "DL"},
-            {"2,6", "DL"}, {"2,8", "DL"},
-            {"3,0", "DL"}, {"3,7", "DL"}, {"3,14", "DL"},
-            {"6,2", "DL"}, {"6,6", "DL"}, {"6,8", "DL"}, {"6,12", "DL"},
-            {"7,3", "DL"}, {"7,11", "DL"},
-            {"8,2", "DL"}, {"8,6", "DL"}, {"8,8", "DL"}, {"8,12", "DL"},
-            {"11,0", "DL"}, {"11,7", "DL"}, {"11,14", "DL"},
-            {"12,6", "DL"}, {"12,8", "DL"},
-            {"14,3", "DL"}, {"14,11", "DL"},
-            
+            // Triple Word Score (Red) - Updated from scoringBoard array
+            {"0,3", "TW"}, {"0,11", "TW"},
+            {"3,0", "TW"}, {"3,14", "TW"},
+            {"11,0", "TW"}, {"11,14", "TW"},
+            {"14,3", "TW"}, {"14,11", "TW"},
+
+            // Double Word Score (Pink) - Updated from scoringBoard array
+            {"1,1", "DW"}, {"1,13", "DW"},
+            {"3,7", "DW"}, {"7,3", "DW"}, {"7,11", "DW"}, {"11,7", "DW"},
+            {"13,1", "DW"}, {"13,13", "DW"},
+
+            // Triple Letter Score (Blue) - Updated from scoringBoard array
+            {"0,0", "TL"}, {"0,14", "TL"},
+            {"1,6", "TL"}, {"1,8", "TL"},
+            {"4,5", "TL"}, {"4,9", "TL"},
+            {"5,4", "TL"}, {"5,10", "TL"},
+            {"6,1", "TL"}, {"6,13", "TL"},
+            {"8,1", "TL"}, {"8,13", "TL"},
+            {"9,4", "TL"}, {"9,10", "TL"},
+            {"10,5", "TL"}, {"10,9", "TL"},
+            {"13,6", "TL"}, {"13,8", "TL"},
+            {"14,0", "TL"}, {"14,14", "TL"},
+
+            // Double Letter Score (Light Blue) - Updated from scoringBoard array
+            {"0,7", "DL"}, {"2,4", "DL"}, {"2,10", "DL"},
+            {"3,3", "DL"}, {"3,11", "DL"},
+            {"4,2", "DL"}, {"4,12", "DL"},
+            {"5,7", "DL"}, {"7,0", "DL"}, {"7,5", "DL"}, {"7,9", "DL"}, {"7,14", "DL"},
+            {"9,7", "DL"}, {"10,2", "DL"}, {"10,12", "DL"},
+            {"11,3", "DL"}, {"11,11", "DL"},
+            {"12,4", "DL"}, {"12,10", "DL"},
+            {"14,7", "DL"},
+
             // Center (Star - treated as Double Word)
             {"7,7", "★"}
         };
