@@ -247,7 +247,7 @@ namespace ScrabbleSolver
 
                 testMove.AddNewLetter(letter, currentRow, currentColumn);
 
-                var currentWords = testMove.FindWords();
+                var currentWords = testMove.FindNewWords();
                 if (ValidateWordSubstring(currentWords))
                 {
                     if (ValidateWords(currentWords).Any() == false)
