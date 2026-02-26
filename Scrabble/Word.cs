@@ -72,7 +72,20 @@ namespace ScrabbleSolver
             if (ReferenceEquals(x, y)) return true;
             if (ReferenceEquals(x, null) || ReferenceEquals(y, null)) return false;
 
-            return x.Positions.Select(p => p.Item2).SequenceEqual(y.Positions.Select(p => p.Item2)) && x.Positions.Select(p => p.Item3).SequenceEqual(y.Positions.Select(p => p.Item3));
+            // Quick length check
+            if (x.Positions.Count != y.Positions.Count) return false;
+
+            // Single-pass comparison of row and column positions
+            for (int i = 0; i < x.Positions.Count; i++)
+            {
+                if (x.Positions[i].Item2 != y.Positions[i].Item2 || 
+                    x.Positions[i].Item3 != y.Positions[i].Item3)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public int GetHashCode(Word obj)

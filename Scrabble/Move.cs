@@ -115,10 +115,12 @@ namespace ScrabbleSolver
 
         public List<Word> FindWords(char[,] board)
         {
+            const int boardSize = 15;
             List<Word> words = new List<Word>();
-            for (int currentRow = 0; currentRow < 15; currentRow++)
+
+            for (int currentRow = 0; currentRow < boardSize; currentRow++)
             {
-                for (int currentColumn = 0; currentColumn < 15; currentColumn++)
+                for (int currentColumn = 0; currentColumn < boardSize; currentColumn++)
                 {
                     char tile = board[currentRow, currentColumn];
                     if (tile != ' ')
@@ -126,38 +128,57 @@ namespace ScrabbleSolver
                         // Check horizontally
                         if (currentColumn == 0 || board[currentRow, currentColumn - 1] == ' ')
                         {
-                            Word word = new Word();
                             int columnPointer = currentColumn;
-                            while (columnPointer < 15 && board[currentRow, columnPointer] != ' ')
+                            int wordLength = 0;
+
+                            while (columnPointer < boardSize && board[currentRow, columnPointer] != ' ')
                             {
-                                word.WordBuilder.Append(board[currentRow, columnPointer]);
-                                word.Positions.Add(new Tuple<char, int, int>(board[currentRow, columnPointer], currentRow, columnPointer));
                                 columnPointer++;
+                                wordLength++;
                             }
 
-                            word.Lock();
-
-                            if (word.Text.Length > 1)
+                            if (wordLength > 1)
                             {
+                                Word word = new Word();
+                                word.Positions.Capacity = wordLength;
+
+                                for (int col = currentColumn; col < currentColumn + wordLength; col++)
+                                {
+                                    char letter = board[currentRow, col];
+                                    word.WordBuilder.Append(letter);
+                                    word.Positions.Add(new Tuple<char, int, int>(letter, currentRow, col));
+                                }
+
+                                word.Lock();
                                 words.Add(word);
                             }
                         }
+
                         // Check vertically
-                        if (currentRow == 0 || _boardState[currentRow - 1, currentColumn] == ' ')
+                        if (currentRow == 0 || board[currentRow - 1, currentColumn] == ' ')
                         {
-                            Word word = new Word();
                             int rowPointer = currentRow;
-                            while (rowPointer < 15 && board[rowPointer, currentColumn] != ' ')
+                            int wordLength = 0;
+
+                            while (rowPointer < boardSize && board[rowPointer, currentColumn] != ' ')
                             {
-                                word.WordBuilder.Append(board[rowPointer, currentColumn]);
-                                word.Positions.Add(new Tuple<char, int, int>(board[rowPointer, currentColumn], rowPointer, currentColumn));
                                 rowPointer++;
+                                wordLength++;
                             }
 
-                            word.Lock();
-
-                            if (word.Text.Length > 1)
+                            if (wordLength > 1)
                             {
+                                Word word = new Word();
+                                word.Positions.Capacity = wordLength;
+
+                                for (int row = currentRow; row < currentRow + wordLength; row++)
+                                {
+                                    char letter = board[row, currentColumn];
+                                    word.WordBuilder.Append(letter);
+                                    word.Positions.Add(new Tuple<char, int, int>(letter, row, currentColumn));
+                                }
+
+                                word.Lock();
                                 words.Add(word);
                             }
                         }
@@ -171,7 +192,7 @@ namespace ScrabbleSolver
         public List<Word> FindNewWords()
         {
             var oldWords = FindWords(_initialBoardState);
-            var newWords = FindWords(_boardState);
+            var newWords = FindWords();
 
 
             return newWords.Except(oldWords, new WordComparer()).ToList();
