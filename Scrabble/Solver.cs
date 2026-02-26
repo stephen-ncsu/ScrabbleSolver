@@ -150,7 +150,7 @@ namespace ScrabbleSolver
             {
                 for (int col = 0; col < 15; col++)
                 {
-                    positions[row, col] = IsPositionPlayable(_baseMove.GetBoardState(), row, col);
+                    positions[row, col] = IsPositionPlayable(_baseMove.GetBoardState(), row, col, true);
                 }
             }
 
@@ -159,7 +159,7 @@ namespace ScrabbleSolver
         }
 
 
-        private int IsPositionPlayable(char [,] board, int row, int col)
+        private int IsPositionPlayable(char [,] board, int row, int col, bool needsToBeAdjacent)
         {
             if(row < 0 || row >= 15 || col < 0 || col >= 15)
             {
@@ -169,10 +169,14 @@ namespace ScrabbleSolver
             if (board[row, col] == ' ')
             {
                 // Check if adjacent to a tile
-                if ((row > 0 && board[row - 1, col] != ' ') ||
+                if (needsToBeAdjacent && ((row > 0 && board[row - 1, col] != ' ') ||
                     (row < 14 && board[row + 1, col] != ' ') ||
                     (col > 0 && board[row, col - 1] != ' ') ||
-                    (col < 14 && board[row, col + 1] != ' '))
+                    (col < 14 && board[row, col + 1] != ' ')))
+                {
+                    return 1;
+                }
+                else if(needsToBeAdjacent == false)
                 {
                     return 1;
                 }
@@ -190,22 +194,22 @@ namespace ScrabbleSolver
 
             List<Enums.Direction> availableDirections = new List<Enums.Direction>();
 
-            if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow + 1, startingColumn) == 1)
+            if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow + 1, startingColumn, false) == 1)
             {
                 availableDirections.Add(Enums.Direction.Down);
             }
 
-            if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow - 1, startingColumn) == 1)
+            if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow - 1, startingColumn, false) == 1)
             {
                 availableDirections.Add(Enums.Direction.Up);
             }
 
-            if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn + 1) == 1)
+            if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn + 1, false) == 1)
             {
                 availableDirections.Add(Enums.Direction.Right);
             }
 
-            if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn - 1) == 1)
+            if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn - 1, false) == 1)
             {
                 availableDirections.Add(Enums.Direction.Left);
             }
@@ -240,10 +244,10 @@ namespace ScrabbleSolver
             //generate moves for letter set at position
             foreach (var letter in letters)
             {
-                if(_impossibleLetters.Contains(letter))
-                {
-                    return null;
-                }
+                //if(_impossibleLetters.Contains(letter))
+                //{
+                //    return null;
+                //}
 
                 testMove.AddNewLetter(letter, currentRow, currentColumn);
 
@@ -266,28 +270,28 @@ namespace ScrabbleSolver
                     switch (direction)
                     {
                         case Enums.Direction.Up:
-                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow - 1, currentColumn) == 1)
+                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow - 1, currentColumn, true) == 1)
                             {
                                 currentRow--;
                                 continue;
                             }
                             break;
                         case Enums.Direction.Down:
-                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow + 1, currentColumn) == 1)
+                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow + 1, currentColumn, true) == 1)
                             {
                                 currentRow++;
                                 continue;
                             }
                             break;
                         case Enums.Direction.Left:
-                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn - 1) == 1)
+                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn - 1, true) == 1)
                             {
                                 currentColumn--;
                                 continue;
                             }
                             break;
                         case Enums.Direction.Right:
-                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn + 1) == 1)
+                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn + 1, true) == 1)
                             {
                                 currentColumn++;
                                 continue;
