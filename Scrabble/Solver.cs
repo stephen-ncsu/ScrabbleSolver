@@ -17,16 +17,24 @@ namespace ScrabbleSolver
         HashSet<string> _validSubstrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         HashSet<string> _invalidSubstrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private List<List<char>> _allPermutations;
+        private List<List<bool>> _allPermutationWildcards; // Track which positions are wildcards
         private List<char> _impossibleLetters = new List<char>();
         private HashSet<string> _dictionarySubstringIndex;
         private List<Word> _baseWords;
         private List<char> _remainingLetters;
+        private int _wildcardCount = 0;
+        private const char WILDCARD_CHAR = '*';
 
         public Solver(char[,] board, string rack)
         {
             _baseMove = new Move(board);
-            _remainingLetters = rack.ToCharArray().ToList();
+
+            // Count and separate wildcards
+            _wildcardCount = rack.Count(c => c == WILDCARD_CHAR || c == '?' || c == '_');
+            _remainingLetters = rack.Where(c => c != WILDCARD_CHAR && c != '?' && c != '_').ToList();
+
             _dictionary = System.IO.File.ReadAllLines("myDictionary.txt").ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _invalidSubstrings = System.IO.File.ReadAllLines("InvalidSubstrings.txt").ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
         public List<Move> Solve()
@@ -45,8 +53,28 @@ namespace ScrabbleSolver
             _dictionarySubstringIndex = BuildSubstringIndex(_dictionary);
             Serilog.Log.Logger.Information($"Substring index built successfully with {_dictionarySubstringIndex.Count} entries.");
 
-            _allPermutations = GenerateUniquePermutations(_remainingLetters);
+            // Generate permutations with wildcard expansion
+            if (_wildcardCount > 0)
+            {
+                Serilog.Log.Logger.Information($"Generating permutations with {_wildcardCount} wildcard(s)...");
+                GeneratePermutationsWithWildcards(_remainingLetters, _wildcardCount, usableCharacters);
+                Serilog.Log.Logger.Information($"Generated {_allPermutations.Count} permutations with wildcard expansions.");
+            }
+            else
+            {
+                _allPermutations = GenerateUniquePermutations(_remainingLetters);
+                _allPermutationWildcards = new List<List<bool>>();
+                foreach (var perm in _allPermutations)
+                {
+                    _allPermutationWildcards.Add(Enumerable.Repeat(false, perm.Count).ToList());
+                }
+            }
 
+            //var someting = BuildInvalid2LetterSubstrings();
+            //var result = String.Join(Environment.NewLine, someting);
+
+            //var someting2 = BuildInvalid3LetterSubstrings();
+            //var result2 = String.Join(Environment.NewLine, someting2);
             RemoveImpossiblePermuatations();
 
             //List<object> possibleMoves = new List<object>();
@@ -77,10 +105,148 @@ namespace ScrabbleSolver
             return _possibleMoves;
         }
 
+        private HashSet<string> BuildInvalid2LetterSubstrings()
+        {
+            var invalid2Letters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            Serilog.Log.Logger.Information("Building list of invalid 4-letter substrings (excluding those covered by 3-letter invalids)...");
+
+            int totalChecked = 0;
+            int skippedDueToInvalid3Letter = 0;
+
+            // Generate all possible 4-letter combinations (26^4 = 456,976 total)
+            for (char c1 = 'A'; c1 <= 'Z'; c1++)
+            {
+                for (char c2 = 'A'; c2 <= 'Z'; c2++)
+                {
+                    string substring = $"{c1}{c2}";
+                    totalChecked++;
+
+                    // Check if this 4-letter substring is NOT in the dictionary
+                    if (!_dictionarySubstringIndex.Contains(substring))
+                    {
+                        invalid2Letters.Add(substring);
+                    }
+                }
+            }
+
+            Serilog.Log.Logger.Information($"Found {invalid2Letters.Count} unique invalid 2-letter substrings (out of {totalChecked} total combinations).");
+            
+            return invalid2Letters;
+        }
+
+        private HashSet<string> BuildInvalid3LetterSubstrings()
+        {
+            var invalid5Letters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            Serilog.Log.Logger.Information("Building list of invalid 5-letter substrings (excluding those covered by 4-letter invalids)...");
+
+            int totalChecked = 0;
+            int skippedDueToInvalid4Letter = 0;
+
+            // Generate all possible 5-letter combinations (26^5 = 11,881,376 total)
+            for (char c1 = 'A'; c1 <= 'Z'; c1++)
+            {
+                for (char c2 = 'A'; c2 <= 'Z'; c2++)
+                {
+                    for (char c3 = 'A'; c3 <= 'Z'; c3++)
+                    {
+                        string substring = $"{c1}{c2}{c3}";
+                        totalChecked++;
+
+                        // Check if this 5-letter substring is NOT in the dictionary
+                        if (!_dictionarySubstringIndex.Contains(substring))
+                        {
+                            // Extract all 4-character substrings from this 5-character string
+                            string sub1 = substring.Substring(0, 2); // c1c2c3c4
+                            string sub2 = substring.Substring(1, 2); // c2c3c4c5
+
+                            // Only add this 5-letter substring if BOTH 4-letter substrings are valid
+                            // (i.e., NOT in the invalid substrings list)
+                            if (!_invalidSubstrings.Contains(sub1) && !_invalidSubstrings.Contains(sub2))
+                            {
+                                invalid5Letters.Add(substring);
+                            }
+                            else
+                            {
+                                skippedDueToInvalid4Letter++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            Serilog.Log.Logger.Information($"Found {invalid5Letters.Count} unique invalid 5-letter substrings (out of {totalChecked} total combinations).");
+            Serilog.Log.Logger.Information($"Skipped {skippedDueToInvalid4Letter} 5-letter substrings already covered by invalid 4-letter substrings.");
+
+            return invalid5Letters;
+        }
+
         private void RemoveImpossiblePermuatations()
         {
-            List<string> invalidSubstrings = new List<string>();
-            foreach(var permuatation in _allPermutations)
+            Serilog.Log.Information($"Current permutations count before filtering: {_allPermutations.Count}");
+            Serilog.Log.Information("Removing impossible permutations based on substring validation...");
+            foreach (var invalidSubstring in _invalidSubstrings)
+            {
+                List<List<char>> permutationsToRemove = new List<List<char>>();
+                foreach (var permuatation in _allPermutations)
+                {
+                    int index = 0;
+                    int? subStringStartIndex = null;
+
+                    while (index < permuatation.Count)
+                    {
+                        if (permuatation[index] == invalidSubstring[0])
+                        {
+                            bool match = true;
+                            subStringStartIndex = index;
+                            for (int j = 1; j < invalidSubstring.Length; j++)
+                            {
+                                if (index + j >= permuatation.Count || permuatation[index + j] != invalidSubstring[j])
+                                {
+                                    match = false;
+                                    subStringStartIndex = null;
+                                    break;
+                                }
+                            }
+
+                            if (match)
+                            {
+                                break;
+                            }
+                        }
+                        index++;
+                    }
+
+                    if (subStringStartIndex != null)
+                    {
+                        if (subStringStartIndex.Value == 0)
+                        {
+                            permutationsToRemove.Add(permuatation);
+                        }
+                        else
+                        {
+                            for (int i = subStringStartIndex.Value + invalidSubstring.Length - 1; i < subStringStartIndex + invalidSubstring.Length; i++)
+                            {
+                                permuatation.RemoveAt(i);
+                            }
+                        }
+                    }
+                }
+
+                foreach(var perm in permutationsToRemove)
+                {
+                    _allPermutations.Remove(perm);
+                }
+                
+                if(permutationsToRemove.Count > 0)
+                {
+                    Serilog.Log.Information($"Current Permutations Count : {_allPermutations.Count}");
+                }
+            }
+
+            var longInvalidSubstrings = new HashSet<string>();
+            foreach (var permuatation in _allPermutations)
             {
                 var subStringIndex = BuildSubstringIndex(new string(permuatation.ToArray()));
 
@@ -88,15 +254,17 @@ namespace ScrabbleSolver
                 {
                     if(_dictionarySubstringIndex.Contains(substring) == false)
                     {
-                        if (invalidSubstrings.Contains(substring) == false)
+                        if (longInvalidSubstrings.Contains(substring) == false)
                         {
-                            invalidSubstrings.Add(substring);
+                            longInvalidSubstrings.Add(substring);
                         }
                     }
                 }
             }
 
-            foreach(var invalidSubstring in invalidSubstrings)
+            Serilog.Log.Information($"Found {longInvalidSubstrings.Count} impossible long substrings.");
+
+            foreach (var invalidSubstring in longInvalidSubstrings)
             {
                 foreach (var permuatation in _allPermutations)
                 {
@@ -139,6 +307,8 @@ namespace ScrabbleSolver
 
             _allPermutations = _allPermutations.Where(permutation => permutation.Count > 0).ToList();
 
+            Serilog.Log.Information($"Current permutations count after filtering: {_allPermutations.Count}");
+
         }
 
         private void DetectImpossibleLetters(List<char> letters, int row, int col)
@@ -159,17 +329,29 @@ namespace ScrabbleSolver
         private HashSet<char> FindChars(List<Word> words, List<char> letters)
         {
             var result = new HashSet<char>();
+
+            // Add all letters from board words
             foreach(var word in words)
             {
                 foreach(var c in word.Text)
                 {
-                    result.Add(c);
+                    result.Add(char.ToUpper(c));
                 }
             }
 
+            // Add all rack letters
             foreach(var letter in letters)
             {
-                result.Add(letter);
+                result.Add(char.ToUpper(letter));
+            }
+
+            // If we have wildcards, include ALL letters A-Z since wildcard can be anything
+            if (_wildcardCount > 0)
+            {
+                for (char c = 'A'; c <= 'Z'; c++)
+                {
+                    result.Add(c);
+                }
             }
 
             return result;
@@ -298,12 +480,15 @@ namespace ScrabbleSolver
 
             foreach (var direction in availableDirections)
             {
-                foreach (var permutation in _allPermutations)
+                for (int permIndex = 0; permIndex < _allPermutations.Count; permIndex++)
                 {
+                    var permutation = _allPermutations[permIndex];
+                    var wildcardFlags = _allPermutationWildcards[permIndex];
+
                     int skipCounter = 0;
                     do
                     {
-                        newMove = GenerateMove(permutation, startingRow, startingColumn, direction, skipCounter);
+                        newMove = GenerateMove(permutation, wildcardFlags, startingRow, startingColumn, direction, skipCounter);
 
                         if (newMove != null)
                         {
@@ -317,21 +502,24 @@ namespace ScrabbleSolver
             return moves;
         }
 
-        private Move GenerateMove(List<char> letters, int startingRow, int startingColumn, Enums.Direction direction, int skipCounter)
+        private Move GenerateMove(List<char> letters, List<bool> isWildcard, int startingRow, int startingColumn, Enums.Direction direction, int skipCounter)
         {
             var testMove = new Move(_baseMove.GetBoardState().Duplicate());
             int currentRow = startingRow;
             int currentColumn = startingColumn;
 
             //generate moves for letter set at position
-            foreach (var letter in letters)
+            for (int i = 0; i < letters.Count; i++)
             {
+                char letter = letters[i];
+                bool wild = isWildcard[i];
+
                 //if(_impossibleLetters.Contains(letter))
                 //{
                 //    return null;
                 //}
 
-                testMove.AddNewLetter(letter, currentRow, currentColumn);
+                testMove.AddNewLetter(letter, currentRow, currentColumn, wild);
 
                 var currentWords = testMove.FindNewWords();
                 if (ValidateWordSubstring(currentWords))
@@ -523,6 +711,99 @@ namespace ScrabbleSolver
 
                 current.RemoveAt(current.Count - 1);
                 used[i] = false;
+            }
+        }
+
+        private void GeneratePermutationsWithWildcards(List<char> regularLetters, int wildcardCount, HashSet<char> usableCharacters)
+        {
+            _allPermutations = new List<List<char>>();
+            _allPermutationWildcards = new List<List<bool>>();
+            var seen = new HashSet<string>();
+
+            // Generate all wildcard combinations
+            GenerateWildcardCombinations(
+                regularLetters, 
+                wildcardCount, 
+                usableCharacters.ToList(), 
+                new List<char>(), 
+                new List<bool>(),
+                0, 
+                seen);
+        }
+
+        private void GenerateWildcardCombinations(
+            List<char> regularLetters, 
+            int remainingWildcards,
+            List<char> usableCharacters, 
+            List<char> currentWildcards,
+            List<bool> currentWildcardFlags,
+            int startIndex, 
+            HashSet<string> seen)
+        {
+            if (remainingWildcards == 0)
+            {
+                // Combine regular letters + wildcard substitutions
+                var combined = new List<char>(regularLetters);
+                combined.AddRange(currentWildcards);
+
+                var wildcardFlags = new List<bool>(Enumerable.Repeat(false, regularLetters.Count));
+                wildcardFlags.AddRange(currentWildcardFlags);
+
+                // Generate all permutations of this combination
+                var permutations = GenerateUniquePermutations(combined);
+
+                foreach (var perm in permutations)
+                {
+                    string permKey = string.Join("", perm);
+                    if (!seen.Contains(permKey))
+                    {
+                        seen.Add(permKey);
+
+                        // Map wildcard flags to the permuted positions
+                        var permWildcardFlags = new List<bool>();
+                        for (int i = 0; i < perm.Count; i++)
+                        {
+                            // Find this character's original position in combined
+                            int originalIndex = -1;
+                            var usedIndices = new HashSet<int>();
+
+                            for (int j = 0; j < combined.Count; j++)
+                            {
+                                if (combined[j] == perm[i] && !usedIndices.Contains(j))
+                                {
+                                    originalIndex = j;
+                                    usedIndices.Add(j);
+                                    break;
+                                }
+                            }
+
+                            permWildcardFlags.Add(originalIndex >= 0 ? wildcardFlags[originalIndex] : false);
+                        }
+
+                        _allPermutations.Add(perm);
+                        _allPermutationWildcards.Add(permWildcardFlags);
+                    }
+                }
+                return;
+            }
+
+            // Try each usable character as a wildcard
+            for (int i = 0; i < usableCharacters.Count; i++)
+            {
+                currentWildcards.Add(usableCharacters[i]);
+                currentWildcardFlags.Add(true); // Mark as wildcard
+
+                GenerateWildcardCombinations(
+                    regularLetters, 
+                    remainingWildcards - 1, 
+                    usableCharacters,
+                    currentWildcards, 
+                    currentWildcardFlags,
+                    i, 
+                    seen);
+
+                currentWildcards.RemoveAt(currentWildcards.Count - 1);
+                currentWildcardFlags.RemoveAt(currentWildcardFlags.Count - 1);
             }
         }
     }

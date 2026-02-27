@@ -13,12 +13,14 @@ namespace ScrabbleSolver
         char[,] _initialBoardState;
         char[,] _boardState;
         List<Tuple<char, int, int>> _changedPositions = new List<Tuple<char, int, int>>();
+        HashSet<(int row, int col)> _wildcardPositions = new HashSet<(int row, int col)>();
 
         public Move(char[,] boardState)
         {
             _boardState = boardState.Duplicate();
             _initialBoardState = boardState.Duplicate();
             _changedPositions = new List<Tuple<char, int, int>>();
+            _wildcardPositions = new HashSet<(int row, int col)>();
         }
 
         public int Score { get; set; }
@@ -33,12 +35,27 @@ namespace ScrabbleSolver
             return _changedPositions;
         }
 
-        public void AddNewLetter(char letter, int row, int col)
+        public HashSet<(int row, int col)> GetWildcardPositions()
+        {
+            return _wildcardPositions;
+        }
+
+        public bool IsWildcard(int row, int col)
+        {
+            return _wildcardPositions.Contains((row, col));
+        }
+
+        public void AddNewLetter(char letter, int row, int col, bool isWildcard = false)
         {
             _dirtyCache = true;
             _boardState[row, col] = letter;
 
             _changedPositions.Add(new Tuple<char, int, int>(letter, row, col));
+
+            if (isWildcard)
+            {
+                _wildcardPositions.Add((row, col));
+            }
         }
 
         public bool AreMovesEqual(Move comparedMove)

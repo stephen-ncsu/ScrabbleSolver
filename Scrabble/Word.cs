@@ -23,14 +23,19 @@ namespace ScrabbleSolver
 
         public StringBuilder WordBuilder { get; set; } = new StringBuilder();
 
-        public int GetPointValue(Dictionary<int, Enums.ScoreModifier> scoreModifiers, Dictionary<char, int> letterValues)
+        public int GetPointValue(Dictionary<int, Enums.ScoreModifier> scoreModifiers, Dictionary<char, int> letterValues, Dictionary<int, bool>? isWildcard = null)
         {
             int wordMultiplier = 1;
             int totalPoints = 0;
             for (int i = 0; i < Text.Length; i++)
             {
                 char letter = Text[i];
-                int letterPointValue = letterValues[letter];
+
+                // Wildcards are worth 0 points
+                int letterPointValue = (isWildcard != null && isWildcard.ContainsKey(i) && isWildcard[i]) 
+                    ? 0 
+                    : letterValues[char.ToUpper(letter)];
+
                 Enums.ScoreModifier modifier = scoreModifiers[i];
 
                 if (modifier == Enums.ScoreModifier.DoubleWord)

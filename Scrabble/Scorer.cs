@@ -67,15 +67,18 @@ namespace ScrabbleSolver
             var boardState = move.GetBoardState();
             var newWords = move.FindNewWords();
             var changedPositions = move.GetChangedPositions();
+            var wildcardPositions = move.GetWildcardPositions();
 
             foreach(var newWord in newWords)
             {
                 Dictionary<int, Enums.ScoreModifier> letterMultiplier = new Dictionary<int, Enums.ScoreModifier>();
+                Dictionary<int, bool> isWildcard = new Dictionary<int, bool>();
                 int letterIndex = 0;
+
                 foreach (var wordPosition in newWord.Positions)
                 {
                     var positionOfNewLetter = changedPositions.SingleOrDefault(x => x.Item2 == wordPosition.Item2 && x.Item3 == wordPosition.Item3);
-                    
+
                     Enums.ScoreModifier scoringModifier = Enums.ScoreModifier.None;
 
                     if (positionOfNewLetter != null)
@@ -83,12 +86,15 @@ namespace ScrabbleSolver
                         scoringModifier = scoringBoard[positionOfNewLetter.Item2, positionOfNewLetter.Item3];
                     }
 
-                    letterMultiplier.Add(letterIndex, scoringModifier);
-                    letterIndex++;
+                    // Check if this position is a wildcard
+                    bool wild = wildcardPositions.Contains((wordPosition.Item2, wordPosition.Item3));
 
+                    letterMultiplier.Add(letterIndex, scoringModifier);
+                    isWildcard.Add(letterIndex, wild);
+                    letterIndex++;
                 }
 
-                score += newWord.GetPointValue(letterMultiplier, _letterValues);
+                score += newWord.GetPointValue(letterMultiplier, _letterValues, isWildcard);
             }
 
             return score;
