@@ -18,7 +18,7 @@ namespace ScrabbleSolver
         HashSet<string> _invalidSubstrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private List<List<char>> _allPermutations;
         private List<char> _impossibleLetters = new List<char>();
-        private HashSet<string> _allSubstringsIndex;
+        private HashSet<string> _dictionarySubstringIndex;
         private List<Word> _baseWords;
         private List<char> _remainingLetters;
 
@@ -42,10 +42,12 @@ namespace ScrabbleSolver
             Serilog.Log.Logger.Information("Error words: " + String.Join(',', errorWords.Select(x=>x.Text).ToArray()));
 
             Serilog.Log.Logger.Information("Building substring index from dictionary...");
-            _allSubstringsIndex = BuildSubstringIndex(_dictionary);
-            Serilog.Log.Logger.Information($"Substring index built successfully with {_allSubstringsIndex.Count} entries.");
+            _dictionarySubstringIndex = BuildSubstringIndex(_dictionary);
+            Serilog.Log.Logger.Information($"Substring index built successfully with {_dictionarySubstringIndex.Count} entries.");
 
             _allPermutations = GenerateUniquePermutations(_remainingLetters);
+
+            RemoveImpossiblePermuatations();
 
             //List<object> possibleMoves = new List<object>();
             var playablePositions = GetPlayablePositions();
@@ -73,6 +75,70 @@ namespace ScrabbleSolver
             }
 
             return _possibleMoves;
+        }
+
+        private void RemoveImpossiblePermuatations()
+        {
+            List<string> invalidSubstrings = new List<string>();
+            foreach(var permuatation in _allPermutations)
+            {
+                var subStringIndex = BuildSubstringIndex(new string(permuatation.ToArray()));
+
+                foreach(var substring in subStringIndex)
+                {
+                    if(_dictionarySubstringIndex.Contains(substring) == false)
+                    {
+                        if (invalidSubstrings.Contains(substring) == false)
+                        {
+                            invalidSubstrings.Add(substring);
+                        }
+                    }
+                }
+            }
+
+            foreach(var invalidSubstring in invalidSubstrings)
+            {
+                foreach (var permuatation in _allPermutations)
+                {
+                    int index = 0;
+                    int? subStringStartIndex = null;
+
+                    while (index < permuatation.Count)
+                    {
+                        if (permuatation[index] == invalidSubstring[0])
+                        {
+                            bool match = true;
+                            subStringStartIndex = index;
+                            for (int j = 1; j < invalidSubstring.Length; j++)
+                            {
+                                if (index + j >= permuatation.Count || permuatation[index + j] != invalidSubstring[j])
+                                {
+                                    match = false;
+                                    subStringStartIndex = null;
+                                    break;
+                                }
+                            }
+
+                            if (match)
+                            {
+                                break;
+                            }
+                        }
+                        index++;
+                    }
+
+                    if (subStringStartIndex != null)
+                    {
+                        for (int i = subStringStartIndex.Value + invalidSubstring.Length - 1; i < subStringStartIndex + invalidSubstring.Length; i++)
+                        {
+                            permuatation.RemoveAt(i);
+                        }
+                    }
+                }
+            }
+
+            _allPermutations = _allPermutations.Where(permutation => permutation.Count > 0).ToList();
+
         }
 
         private void DetectImpossibleLetters(List<char> letters, int row, int col)
@@ -123,6 +189,22 @@ namespace ScrabbleSolver
                     }
                 }
             }
+
+            return substrings;
+        }
+
+        private HashSet<string> BuildSubstringIndex(string word)
+        {
+            var substrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            for (int i = 0; i < word.Length; i++)
+            {
+                for (int len = 1; len <= word.Length - i; len++)
+                {
+                    substrings.Add(word.Substring(i, len));
+                }
+            }
+
 
             return substrings;
         }
@@ -359,7 +441,7 @@ namespace ScrabbleSolver
                     // Optimization: Direct Contains() check instead of LINQ Any()
                     if (!_validSubstrings.Contains(unvalidatedSubstring.Text))
                     {
-                        if (_allSubstringsIndex.Contains(unvalidatedSubstring.Text))
+                        if (_dictionarySubstringIndex.Contains(unvalidatedSubstring.Text))
                         {
                             if (!_validSubstrings.Contains(unvalidatedSubstring.Text))
                             {
