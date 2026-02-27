@@ -10,11 +10,14 @@ namespace ScrabbleSolver
     public class RackImagePrep
     {
         char [] _rack = new char[7];
+        List<int> _unrecognizedTiles = new List<int>();
         OCR _ocr = new OCR();
+        string _defaultCharacter = "*";
 
         public char[] Run(string fileName)
         {
-            _rack = new char[7]; // Reset board state for each run
+            _rack = new char[7]; // Reset rack for each run
+            _unrecognizedTiles.Clear(); // Reset unrecognized tiles
             using (Mat inputImage = LoadAndValidateImage(fileName))
             {
                 if (inputImage == null)
@@ -31,6 +34,11 @@ namespace ScrabbleSolver
             _ocr.ShowErrorMontage();
 
             return _rack;
+        }
+
+        public List<int> GetUnrecognizedTiles()
+        {
+            return _unrecognizedTiles;
         }
 
         private void ProcessRackCells(Mat rack)
@@ -118,15 +126,9 @@ namespace ScrabbleSolver
                     using (Mat final = PrepareImageForOcr(cleanTile))
                     {
                         // 5. Execute OCR
-                        string text = _ocr.ExecuteOcr(final);
+                        string text = _ocr.ExecuteOcr(final, _defaultCharacter);
 
-
-                        if (string.IsNullOrEmpty(text))
-                        {
-                            VisualizeDebugInfo(final, stats, nLabels, text, column);
-                        }
-
-                        return string.IsNullOrEmpty(text) ? "*" : text.Substring(0, 1);
+                        return text.Substring(0, 1);
                     }
                 }
             }

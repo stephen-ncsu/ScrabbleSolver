@@ -18,7 +18,7 @@ namespace ScrabbleSolver
             set;
         } = new List<Mat>();
 
-        public string ExecuteOcr(Mat final)
+        public string ExecuteOcr(Mat final, string defaultCharacter)
         {
             // Try the standard approach first
             string result = ExecuteStandardOcr(final, "3");
@@ -40,7 +40,7 @@ namespace ScrabbleSolver
             }
 
 
-            return result;
+            return result.Length == 1 ? result.Substring(0, 1) : defaultCharacter;
         }
 
         private string AnalyzeShapeForOQ(Mat image)

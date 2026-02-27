@@ -10,6 +10,8 @@ namespace ScrabbleSolver
     public class BoardImagePrep
     {
         private char[,] _boardState = new char[15, 15];
+        private List<(int row, int col)> _unrecognizedTiles = new List<(int row, int col)>();
+        string _defaultCharacter = "?";
 
         OCR _ocr = new OCR();
 
@@ -212,6 +214,7 @@ namespace ScrabbleSolver
         public char[,] Run(string fileName)
         {
             _boardState = new char[15, 15]; // Reset board state for each run
+            _unrecognizedTiles.Clear(); // Reset unrecognized tiles
             using (Mat inputImage = LoadAndValidateImage(fileName))
             {
                 if (inputImage == null)
@@ -235,6 +238,11 @@ namespace ScrabbleSolver
             _ocr.ShowErrorMontage();
 
             return _boardState;
+        }
+
+        public List<(int row, int col)> GetUnrecognizedTiles()
+        {
+            return _unrecognizedTiles;
         }
 
         private dynamic FindLargestBoardContour(Mat thresholded, Mat inputImage)
@@ -449,15 +457,16 @@ namespace ScrabbleSolver
                     using (Mat final = PrepareImageForOcr(cleanTile))
                     {
                         // 5. Execute OCR
-                        string text = _ocr.ExecuteOcr(final);
+                        string text = _ocr.ExecuteOcr(final, _defaultCharacter);
 
 
-                        if (string.IsNullOrEmpty(text))
+                        if (text == "?")
                         {
                             VisualizeDebugInfo(final, stats, nLabels, text, row, column);
+                            _unrecognizedTiles.Add((row, column));
                         }
 
-                        return string.IsNullOrEmpty(text) ? "?" : text.Substring(0, 1);
+                        return text.Substring(0, 1);
                     }
                 }
             }

@@ -183,10 +183,15 @@ namespace ScrabbleUIWPF
         private void TileTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             var textBox = (TextBox)sender;
-            
-            // Change style based on whether it has content
+
+            // Support wildcard characters
             if (!string.IsNullOrWhiteSpace(textBox.Text))
             {
+                if (textBox.Text == "?" || textBox.Text == "_")
+                {
+                    textBox.Text = "*";
+                }
+
                 textBox.Style = (Style)FindResource("TileTextBox");
             }
             else
@@ -216,10 +221,10 @@ namespace ScrabbleUIWPF
                     {
                         textBox.Text = tile.ToString();
 
-                        // Check if this position should be highlighted
-                        if (highlightedPositions != null && highlightedPositions.Contains((row, col)))
+                        // Check if this position should be highlighted as unrecognized
+                        if (tile == '*' || (highlightedPositions != null && highlightedPositions.Contains((row, col))))
                         {
-                            textBox.Style = (Style)FindResource("HighlightedTileTextBox");
+                            textBox.Style = (Style)FindResource("UnrecognizedTileTextBox");
                         }
                         else
                         {

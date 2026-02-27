@@ -71,6 +71,13 @@
             <Setter Property="BorderBrush" Value="#228B22"/>
         </Style>
 
+        <!-- Unrecognized Tile TextBox Style (for OCR failures) -->
+        <Style x:Key="UnrecognizedTileTextBox" TargetType="TextBox" BasedOn="{StaticResource TileTextBox}">
+            <Setter Property="Background" Value="#FFC8C8"/>
+            <Setter Property="BorderThickness" Value="3"/>
+            <Setter Property="BorderBrush" Value="Red"/>
+        </Style>
+
         <!-- Empty Tile TextBox Style -->
         <Style x:Key="EmptyTileTextBox" TargetType="TextBox" BasedOn="{StaticResource TileTextBox}">
             <Setter Property="Background" Value="Transparent"/>
@@ -87,10 +94,10 @@
             <Setter Property="Foreground" Value="#333333"/>
         </Style>
     </UserControl.Resources>
-    
+
     <Grid>
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-            <Grid x:Name="BoardGrid" Background="#F5F5DC" ShowGridLines="False">
+            <Grid x:Name="BoardGrid" Background="#F5F5DC" ShowGridLines="False" Height="645" Width="645">
                 <!-- Will be populated in code-behind -->
             </Grid>
         </ScrollViewer>

@@ -1,0 +1,106 @@
+<Window x:Class="ScrabbleUIWPF.OcrResultsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="OCR Results - Review and Correct" 
+        Height="700" Width="1000"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F5F5">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
+            <TextBlock Text="Review OCR Results" 
+                       FontSize="24" 
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"/>
+            <TextBlock x:Name="InstructionsLabel"
+                       Text="Review the detected tiles. Red-highlighted tiles were not recognized - please correct them."
+                       FontSize="13"
+                       Foreground="Gray"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       Margin="0,5,0,0"
+                       MaxWidth="800"/>
+        </StackPanel>
+
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                
+                <!-- Original Image with Annotations -->
+                <GroupBox Header="Original Image" 
+                          Margin="0,0,0,15"
+                          Padding="10">
+                    <Border BorderBrush="Gray"
+                            BorderThickness="2"
+                            Background="White"
+                            Padding="10">
+                        <Image x:Name="OriginalImage" 
+                               Stretch="Uniform"
+                               MaxHeight="400"/>
+                    </Border>
+                </GroupBox>
+
+                <!-- Board Section -->
+                <GroupBox Header="Detected Board" 
+                          Margin="0,0,0,15"
+                          Padding="10">
+                    <StackPanel>
+                        <TextBlock x:Name="BoardStatusLabel"
+                                   FontSize="14"
+                                   HorizontalAlignment="Center"
+                                   Foreground="Green"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Rack Section -->
+                <GroupBox Header="Your Rack" 
+                          Padding="10">
+                    <StackPanel>
+                        <TextBlock x:Name="RackStatusLabel"
+                                   FontSize="14"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </GroupBox>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Action Buttons -->
+        <Grid Grid.Row="2" Margin="0,15,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="15"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <Button Grid.Column="0"
+                    Content="🔄 Re-scan Image"
+                    Click="RescanButton_Click"
+                    Background="Orange"
+                    Foreground="White"
+                    Padding="10"
+                    Height="40"
+                    FontSize="14"
+                    FontWeight="Bold"/>
+            <Button Grid.Column="2"
+                    Content="✓ Continue to Board"
+                    Click="ContinueButton_Click"
+                    Background="Green"
+                    Foreground="White"
+                    Padding="10"
+                    Height="40"
+                    FontSize="14"
+                    FontWeight="Bold"/>
+        </Grid>
+    </Grid>
+</Window>

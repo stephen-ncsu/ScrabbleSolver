@@ -5,6 +5,7 @@ using ScrabbleSolver;
 using System.Diagnostics;
 using System.Text;
 using System.Windows;
+using System.Windows.Media;
 
 namespace ScrabbleUIWPF
 {
@@ -45,26 +46,72 @@ namespace ScrabbleUIWPF
                 ShowBusyIndicator("Processing image...");
                 StatusTextBlock.Text = "Processing image...";
 
+                char[,]? boardState = null;
+                char[]? rackState = null;
+                List<(int row, int col)>? unrecognizedBoardTiles = null;
+                List<int>? unrecognizedRackTiles = null;
+
                 await Task.Run(() =>
                 {
+                    // Process rack
                     var rackImagePrep = new RackImagePrep();
-                    var rackResult = rackImagePrep.Run(_fileName);
+                    rackState = rackImagePrep.Run(_fileName);
+                    unrecognizedRackTiles = rackImagePrep.GetUnrecognizedTiles();
 
-                    Dispatcher.Invoke(() => { RackTextBox.Text = new string(rackResult); });
-
-                    var imagePrep = new BoardImagePrep();
+                    // Process board
+                    var boardImagePrep = new BoardImagePrep();
                     Cv2.DestroyAllWindows();
-                    _boardState = imagePrep.Run(_fileName);
+                    boardState = boardImagePrep.Run(_fileName);
+                    unrecognizedBoardTiles = boardImagePrep.GetUnrecognizedTiles();
                 });
 
-                CurrentBoardControl.SetBoardState(_boardState);
-                StatusTextBlock.Text = $"Image processed successfully! Rack: {RackTextBox.Text}";
+                HideBusyIndicator();
+
+                // Show OCR results window
+                var ocrResultsWindow = new OcrResultsWindow(
+                    _fileName,
+                    boardState!,
+                    rackState!,
+                    unrecognizedBoardTiles!,
+                    unrecognizedRackTiles!
+                );
+
+                var result = ocrResultsWindow.ShowDialog();
+
+                if (result == true)
+                {
+                    // User clicked Continue
+                    CurrentBoardControl.SetBoardState(boardState!, unrecognizedBoardTiles);
+                    RackControl.SetRack(rackState!, unrecognizedRackTiles);
+
+                    int totalUnrecognized = unrecognizedBoardTiles!.Count + unrecognizedRackTiles!.Count;
+                    if (totalUnrecognized > 0)
+                    {
+                        StatusTextBlock.Text = $"⚠️ Image loaded. {totalUnrecognized} tile(s) not recognized - please correct.";
+                        StatusTextBlock.Foreground = new SolidColorBrush(Colors.Orange);
+                    }
+                    else
+                    {
+                        StatusTextBlock.Text = $"✓ Image processed successfully! Rack: {RackControl.GetRackString()}";
+                        StatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
+                    }
+                }
+                else if (ocrResultsWindow.RescanRequested)
+                {
+                    // User wants to select a different image
+                    BrowseButton_Click(sender, e);
+                }
+                else
+                {
+                    StatusTextBlock.Text = "OCR review cancelled.";
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error processing image: {ex.Message}", "Error", 
+                MessageBox.Show($"Error processing image: {ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 StatusTextBlock.Text = "Error processing image.";
+                StatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
             }
             finally
             {
@@ -76,9 +123,11 @@ namespace ScrabbleUIWPF
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(RackTextBox.Text))
+                var rackString = RackControl.GetRackString();
+
+                if (string.IsNullOrWhiteSpace(rackString))
                 {
-                    MessageBox.Show("Please enter letters in the rack before solving.", "Warning",
+                    MessageBox.Show("Please add tiles to your rack before solving.", "Warning",
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -89,13 +138,12 @@ namespace ScrabbleUIWPF
                 // Get current board state from the control
                 _boardState = CurrentBoardControl.GetBoardState();
 
-                var rackText = RackTextBox.Text;
                 var stopWatch = new Stopwatch();
                 stopWatch.Start();
 
                 await Task.Run(() =>
                 {
-                    var solver = new Solver(_boardState, rackText);
+                    var solver = new Solver(_boardState, rackString);
                     _moves = solver.Solve();
                 });
 
@@ -105,6 +153,7 @@ namespace ScrabbleUIWPF
                     _moves.Count, stopWatch.ElapsedMilliseconds);
 
                 StatusTextBlock.Text = $"Found {_moves.Count} moves in {stopWatch.Elapsed.TotalSeconds:F2}s. Click 'Calculate Scores' to rank them.";
+                StatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
                 MoveInfoTextBox.Text = $"Found {_moves.Count} possible moves.\n\nClick 'Calculate Scores' to evaluate and rank them.";
             }
             catch (Exception ex)
@@ -112,6 +161,7 @@ namespace ScrabbleUIWPF
                 MessageBox.Show($"Error solving: {ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 StatusTextBlock.Text = "Error during solve.";
+                StatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
             }
             finally
             {
