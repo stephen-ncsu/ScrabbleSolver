@@ -10,7 +10,7 @@ namespace ScrabbleSolver
     public class BoardImagePrep
     {
         private char[,] _boardState = new char[15, 15];
-        private List<(int row, int col)> _unrecognizedTiles = new List<(int row, int col)>();
+        private Dictionary<(int row, int col), Mat> _unrecognizedTileImages = new Dictionary<(int row, int col), Mat>();
         string _defaultCharacter = "?";
 
         OCR _ocr = new OCR();
@@ -214,7 +214,7 @@ namespace ScrabbleSolver
         public char[,] Run(string fileName)
         {
             _boardState = new char[15, 15]; // Reset board state for each run
-            _unrecognizedTiles.Clear(); // Reset unrecognized tiles
+            _unrecognizedTileImages.Clear(); // Reset tile images
             using (Mat inputImage = LoadAndValidateImage(fileName))
             {
                 if (inputImage == null)
@@ -235,14 +235,14 @@ namespace ScrabbleSolver
                 }
             }
 
-            _ocr.ShowErrorMontage();
+            //_ocr.ShowErrorMontage();
 
             return _boardState;
         }
 
-        public List<(int row, int col)> GetUnrecognizedTiles()
+        public Dictionary<(int row, int col), Mat> GetUnrecognizedTileImages()
         {
-            return _unrecognizedTiles;
+            return _unrecognizedTileImages;
         }
 
         private dynamic FindLargestBoardContour(Mat thresholded, Mat inputImage)
@@ -418,7 +418,13 @@ namespace ScrabbleSolver
                 if (IsTilePresent(cell))
                 {
                     string detected = RunOCR(cell, row, col);
-                    _boardState[row, col] = string.IsNullOrEmpty(detected) ? '?' : detected[0];
+                    if (detected == "?")
+                    {
+                        // Save a copy of the cell image for user review
+                        _unrecognizedTileImages[(row, col)] = cell.Clone();
+                    }
+
+                    _boardState[row, col] = detected[0];
                 }
                 else
                 {
@@ -463,7 +469,6 @@ namespace ScrabbleSolver
                         if (text == "?")
                         {
                             VisualizeDebugInfo(final, stats, nLabels, text, row, column);
-                            _unrecognizedTiles.Add((row, column));
                         }
 
                         return text.Substring(0, 1);

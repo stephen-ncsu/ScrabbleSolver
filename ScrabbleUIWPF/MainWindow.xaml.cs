@@ -48,8 +48,9 @@ namespace ScrabbleUIWPF
 
                 char[,]? boardState = null;
                 char[]? rackState = null;
-                List<(int row, int col)>? unrecognizedBoardTiles = null;
                 List<int>? unrecognizedRackTiles = null;
+                Dictionary<(int row, int col), OpenCvSharp.Mat>? boardTileImages = null;
+                Dictionary<int, OpenCvSharp.Mat>? rackTileImages = null;
 
                 await Task.Run(() =>
                 {
@@ -57,53 +58,71 @@ namespace ScrabbleUIWPF
                     var rackImagePrep = new RackImagePrep();
                     rackState = rackImagePrep.Run(_fileName);
                     unrecognizedRackTiles = rackImagePrep.GetUnrecognizedTiles();
+                    rackTileImages = rackImagePrep.GetUnrecognizedTileImages();
 
                     // Process board
                     var boardImagePrep = new BoardImagePrep();
                     Cv2.DestroyAllWindows();
                     boardState = boardImagePrep.Run(_fileName);
-                    unrecognizedBoardTiles = boardImagePrep.GetUnrecognizedTiles();
+                    boardTileImages = boardImagePrep.GetUnrecognizedTileImages();
                 });
 
                 HideBusyIndicator();
 
-                // Show OCR results window
-                var ocrResultsWindow = new OcrResultsWindow(
-                    _fileName,
-                    boardState!,
-                    rackState!,
-                    unrecognizedBoardTiles!,
-                    unrecognizedRackTiles!
-                );
+                // Check if there are tiles to correct
+                int totalUnrecognized = boardTileImages!.Count + unrecognizedRackTiles!.Count;
 
-                var result = ocrResultsWindow.ShowDialog();
-
-                if (result == true)
+                if (totalUnrecognized > 0)
                 {
-                    // User clicked Continue
-                    CurrentBoardControl.SetBoardState(boardState!, unrecognizedBoardTiles);
-                    RackControl.SetRack(rackState!, unrecognizedRackTiles);
+                    // Show tile correction workflow
+                    var tileCorrectionWindow = new TileCorrectionWindow(
+                        boardState!,
+                        rackState!,
+                        boardTileImages,
+                        rackTileImages
+                    );
 
-                    int totalUnrecognized = unrecognizedBoardTiles!.Count + unrecognizedRackTiles!.Count;
-                    if (totalUnrecognized > 0)
+                    var correctionResult = tileCorrectionWindow.ShowDialog();
+
+                    if (correctionResult == true)
                     {
-                        StatusTextBlock.Text = $"⚠️ Image loaded. {totalUnrecognized} tile(s) not recognized - please correct.";
-                        StatusTextBlock.Foreground = new SolidColorBrush(Colors.Orange);
+                        // Get corrected states
+                        boardState = tileCorrectionWindow.GetCorrectedBoardState();
+                        rackState = tileCorrectionWindow.GetCorrectedRackState();
+
+                        // Check how many are still uncorrected (marked as *)
+                        int stillUnrecognized = CountUnrecognizedTiles(boardState, rackState);
+
+                        // Update board and rack - no highlighting since tiles are corrected
+                        CurrentBoardControl.SetBoardState(boardState!, null);
+                        RackControl.SetRack(rackState!, null);
+
+                        if (stillUnrecognized > 0)
+                        {
+                            StatusTextBlock.Text = $"⚠️ Image loaded. {stillUnrecognized} tile(s) still marked as wildcard (*). You can edit them if needed.";
+                            StatusTextBlock.Foreground = new SolidColorBrush(Colors.Orange);
+                        }
+                        else
+                        {
+                            StatusTextBlock.Text = $"✓ All tiles corrected! Rack: {new string(rackState).Trim()}";
+                            StatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
+                        }
                     }
                     else
                     {
-                        StatusTextBlock.Text = $"✓ Image processed successfully! Rack: {RackControl.GetRackString()}";
-                        StatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
+                        // User cancelled correction
+                        StatusTextBlock.Text = "Tile correction cancelled.";
+                        StatusTextBlock.Foreground = new SolidColorBrush(Colors.Gray);
                     }
-                }
-                else if (ocrResultsWindow.RescanRequested)
-                {
-                    // User wants to select a different image
-                    BrowseButton_Click(sender, e);
                 }
                 else
                 {
-                    StatusTextBlock.Text = "OCR review cancelled.";
+                    // No corrections needed - directly update board and rack
+                    CurrentBoardControl.SetBoardState(boardState!, null);
+                    RackControl.SetRack(rackState!, null);
+
+                    StatusTextBlock.Text = $"✓ Image processed successfully! Rack: {new string(rackState).Trim()}";
+                    StatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
                 }
             }
             catch (Exception ex)
@@ -267,6 +286,35 @@ namespace ScrabbleUIWPF
         private void HideBusyIndicator()
         {
             BusyOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private int CountUnrecognizedTiles(char[,] boardState, char[] rackState)
+        {
+            int count = 0;
+
+            // Count board wildcards
+            for (int row = 0; row < 15; row++)
+            {
+                for (int col = 0; col < 15; col++)
+                {
+                    if (boardState[row, col] == '*')
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            // Count rack wildcards (but only if they're not intentional wildcards)
+            // We can't distinguish, so we just count them
+            for (int i = 0; i < 7; i++)
+            {
+                if (rackState[i] == '*')
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
     }
 }

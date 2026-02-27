@@ -11,6 +11,7 @@ namespace ScrabbleSolver
     {
         char [] _rack = new char[7];
         List<int> _unrecognizedTiles = new List<int>();
+        Dictionary<int, Mat> _unrecognizedTileImages = new Dictionary<int, Mat>();
         OCR _ocr = new OCR();
         string _defaultCharacter = "*";
 
@@ -18,6 +19,7 @@ namespace ScrabbleSolver
         {
             _rack = new char[7]; // Reset rack for each run
             _unrecognizedTiles.Clear(); // Reset unrecognized tiles
+            _unrecognizedTileImages.Clear(); // Reset tile images
             using (Mat inputImage = LoadAndValidateImage(fileName))
             {
                 if (inputImage == null)
@@ -31,7 +33,7 @@ namespace ScrabbleSolver
                 }
             }
 
-            _ocr.ShowErrorMontage();
+            //_ocr.ShowErrorMontage();
 
             return _rack;
         }
@@ -39,6 +41,11 @@ namespace ScrabbleSolver
         public List<int> GetUnrecognizedTiles()
         {
             return _unrecognizedTiles;
+        }
+
+        public Dictionary<int, Mat> GetUnrecognizedTileImages()
+        {
+            return _unrecognizedTileImages;
         }
 
         private void ProcessRackCells(Mat rack)
@@ -64,7 +71,17 @@ namespace ScrabbleSolver
                 if (IsTilePresent(cell))
                 {
                     string detected = RunOCR(cell, col);
-                    _rack[col] = string.IsNullOrEmpty(detected) ? '*' : detected[0];
+                    if (string.IsNullOrEmpty(detected))
+                    {
+                        _rack[col] = '*';
+                        _unrecognizedTiles.Add(col);
+                        // Save a copy of the cell image for user review
+                        _unrecognizedTileImages[col] = cell.Clone();
+                    }
+                    else
+                    {
+                        _rack[col] = detected[0];
+                    }
                 }
                 else
                 {
