@@ -47,7 +47,7 @@ namespace ScrabbleSolver
 
             _allPermutations = GenerateUniquePermutations(_remainingLetters);
 
-            RemoveImpossiblePermuatations();
+            //RemoveImpossiblePermuatations();
 
             //List<object> possibleMoves = new List<object>();
             var playablePositions = GetPlayablePositions();
@@ -59,6 +59,11 @@ namespace ScrabbleSolver
                 {
                     if (playablePositions[i, j] == 1)
                     {
+                        if(_baseMove.GetBoardState()[i, j] != ' ')
+                        {
+                            continue;
+                        }
+
                         stopwatch.Restart();
                         DetectImpossibleLetters(_remainingLetters, i, j);
 
@@ -232,7 +237,7 @@ namespace ScrabbleSolver
             {
                 for (int col = 0; col < 15; col++)
                 {
-                    positions[row, col] = IsPositionPlayable(_baseMove.GetBoardState(), row, col, true);
+                    positions[row, col] = 1; // IsPositionPlayable(_baseMove.GetBoardState(), row, col, true);
                 }
             }
 
@@ -333,63 +338,94 @@ namespace ScrabbleSolver
 
                 testMove.AddNewLetter(letter, currentRow, currentColumn);
 
-                var currentWords = testMove.FindNewWords();
-                if (ValidateWordSubstring(currentWords))
+                if (ValidateBoardState(testMove.GetBoardState()))
                 {
-                    if (ValidateWords(currentWords).Any() == false)
-                    {
-                        if (skipCounter == 0)
-                        {
-                            //first valid move, return it
-                            return testMove;
-                        }
-                        else
-                        {
-                            skipCounter--;
-                        }
-                    }
 
-                    switch (direction)
+                    var currentWords = testMove.FindNewWords();
+                    if (ValidateWordSubstring(currentWords))
                     {
-                        case Enums.Direction.Up:
-                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow - 1, currentColumn, true) == 1)
+                        if (ValidateWords(currentWords).Any() == false)
+                        {
+                            if (skipCounter == 0)
                             {
-                                currentRow--;
-                                continue;
+                                //first valid move, return it
+                                return testMove;
                             }
-                            break;
-                        case Enums.Direction.Down:
-                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow + 1, currentColumn, true) == 1)
+                            else
                             {
-                                currentRow++;
-                                continue;
+                                skipCounter--;
                             }
-                            break;
-                        case Enums.Direction.Left:
-                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn - 1, true) == 1)
-                            {
-                                currentColumn--;
-                                continue;
-                            }
-                            break;
-                        case Enums.Direction.Right:
-                            if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn + 1, true) == 1)
-                            {
-                                currentColumn++;
-                                continue;
-                            }
-                            break;
-                    }
+                        }
 
-                    break;
-                }
-                else
-                {
-                    break;
+                        switch (direction)
+                        {
+                            case Enums.Direction.Up:
+                                if (IsPositionPlayable(testMove.GetBoardState(), currentRow - 1, currentColumn, true) == 1)
+                                {
+                                    currentRow--;
+                                    continue;
+                                }
+                                break;
+                            case Enums.Direction.Down:
+                                if (IsPositionPlayable(testMove.GetBoardState(), currentRow + 1, currentColumn, true) == 1)
+                                {
+                                    currentRow++;
+                                    continue;
+                                }
+                                break;
+                            case Enums.Direction.Left:
+                                if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn - 1, true) == 1)
+                                {
+                                    currentColumn--;
+                                    continue;
+                                }
+                                break;
+                            case Enums.Direction.Right:
+                                if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn + 1, true) == 1)
+                                {
+                                    currentColumn++;
+                                    continue;
+                                }
+                                break;
+                        }
+
+                        break;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
 
             return null;
+        }
+
+        private bool ValidateBoardState(char[,] chars)
+        {
+            for (int row = 0; row < 15; row++)
+            {
+                for (int col = 0; col < 15; col++)
+                {
+                    if (chars[row, col] != ' ')
+                    {
+                        // Check if adjacent to a tile
+                        if ((row > 0 && chars[row - 1, col] != ' ') ||
+                            (row < 14 && chars[row + 1, col] != ' ') ||
+                            (col > 0 && chars[row, col - 1] != ' ') ||
+                            (col < 14 && chars[row, col + 1] != ' '))
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
         }
 
         //private bool ValidateWordSubstring(List<string> words)
