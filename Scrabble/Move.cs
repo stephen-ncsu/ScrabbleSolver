@@ -28,6 +28,11 @@ namespace ScrabbleSolver
             return _boardState;
         }
 
+        public char[,] GetInitialBoardState()
+        {
+            return _initialBoardState;
+        }
+
         public List<Tuple<char, int, int>> GetChangedPositions()
         {
             return _changedPositions;

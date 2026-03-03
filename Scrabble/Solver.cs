@@ -233,11 +233,51 @@ namespace ScrabbleSolver
         private int[,] GetPlayablePositions()
         {
             int[,] positions = new int[15, 15];
+            var boardState = _baseMove.GetBoardState();
             for (int row = 0; row < 15; row++)
             {
                 for (int col = 0; col < 15; col++)
                 {
-                    positions[row, col] = 1; // IsPositionPlayable(_baseMove.GetBoardState(), row, col, true);
+                    for(int i = 0; i < _remainingLetters.Count; i++)
+                    {
+                        if(row + i < 15 && boardState[row + i, col] != ' ')
+                        {
+                            positions[row, col] = 1;
+                            break;
+                        }
+
+                        if (row + i < 15 && col + 1 < 15 && boardState[row + i, col + 1] != ' ')
+                        {
+                            positions[row, col] = 1;
+                            break;
+                        }
+
+                        if (row + i < 15 && col - 1 >= 0 && boardState[row + i, col - 1] != ' ')
+                        {
+                            positions[row, col] = 1;
+                            break;
+                        }
+
+
+
+                        if (col + i < 15 && boardState[row, col + i] != ' ')
+                        {
+                            positions[row, col] = 1;
+                            break;
+                        }
+
+                        if (col + i < 15 && row + 1 < 15 && boardState[row + 1, col + i] != ' ')
+                        {
+                            positions[row, col] = 1;
+                            break;
+                        }
+
+                        if (col + i < 15 && row - 1 >= 0 && boardState[row - 1, col + i] != ' ')
+                        {
+                            positions[row, col] = 1;
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -272,6 +312,16 @@ namespace ScrabbleSolver
             return 0;
         }
 
+        private int IsValidBoardPosition(char[,] board, int row, int col)
+        {
+            if (row < 0 || row >= 15 || col < 0 || col >= 15)
+            {
+                return 0;
+            }
+
+            return 1;
+        }
+
 
         private HashSet<Move> GenerateMoves(int startingRow, int startingColumn)
         {
@@ -281,26 +331,29 @@ namespace ScrabbleSolver
 
             List<Enums.Direction> availableDirections = new List<Enums.Direction>();
 
-            if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow + 1, startingColumn, false) == 1)
-            {
-                availableDirections.Add(Enums.Direction.Down);
-            }
+            //if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow + 1, startingColumn, false) == 1)
+            //{
+            //    availableDirections.Add(Enums.Direction.Down);
+            //}
 
-            if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow - 1, startingColumn, false) == 1)
-            {
-                availableDirections.Add(Enums.Direction.Up);
-            }
+            //if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow - 1, startingColumn, false) == 1)
+            //{
+            //    availableDirections.Add(Enums.Direction.Up);
+            //}
 
-            if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn + 1, false) == 1)
-            {
-                availableDirections.Add(Enums.Direction.Right);
-            }
+            //if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn + 1, false) == 1)
+            //{
+            //    availableDirections.Add(Enums.Direction.Right);
+            //}
 
-            if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn - 1, false) == 1)
-            {
-                availableDirections.Add(Enums.Direction.Left);
-            }
+            //if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn - 1, false) == 1)
+            //{
+            //    availableDirections.Add(Enums.Direction.Left);
+            //}
 
+
+            availableDirections.Add(Enums.Direction.Down);
+            availableDirections.Add(Enums.Direction.Right);
             foreach (var direction in availableDirections)
             {
                 foreach (var permutation in _allPermutations)
@@ -338,9 +391,8 @@ namespace ScrabbleSolver
 
                 testMove.AddNewLetter(letter, currentRow, currentColumn);
 
-                if (ValidateBoardState(testMove.GetBoardState()))
+                if (ValidateMovePosition(testMove))
                 {
-
                     var currentWords = testMove.FindNewWords();
                     if (ValidateWordSubstring(currentWords))
                     {
@@ -356,46 +408,82 @@ namespace ScrabbleSolver
                                 skipCounter--;
                             }
                         }
+                    }
+                }
 
-                        switch (direction)
+                switch (direction)
+                {
+                    case Enums.Direction.Up:
+                        currentRow--;
+                        while (IsValidBoardPosition(testMove.GetBoardState(), currentRow, currentColumn) == 1)
                         {
-                            case Enums.Direction.Up:
-                                if (IsPositionPlayable(testMove.GetBoardState(), currentRow - 1, currentColumn, true) == 1)
-                                {
-                                    currentRow--;
-                                    continue;
-                                }
+                            var isPositionPlayable = IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn, false);
+                            if (isPositionPlayable == 1)
+                            {
                                 break;
-                            case Enums.Direction.Down:
-                                if (IsPositionPlayable(testMove.GetBoardState(), currentRow + 1, currentColumn, true) == 1)
-                                {
-                                    currentRow++;
-                                    continue;
-                                }
+                            }
+                            else
+                            {
+                                currentRow--;
+                            }
+                        }
+
+                        return null;
+                    case Enums.Direction.Down:
+                        currentRow++;
+                        bool availablePosition = false;
+                        while (IsValidBoardPosition(testMove.GetBoardState(), currentRow, currentColumn) == 1)
+                        {
+                            var isPositionPlayable = IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn, false);
+                            if (isPositionPlayable == 1)
+                            {
+                                availablePosition = true;
                                 break;
-                            case Enums.Direction.Left:
-                                if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn - 1, true) == 1)
-                                {
-                                    currentColumn--;
-                                    continue;
-                                }
-                                break;
-                            case Enums.Direction.Right:
-                                if (IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn + 1, true) == 1)
-                                {
-                                    currentColumn++;
-                                    continue;
-                                }
-                                break;
+                            }
+                            else
+                            {
+                                currentRow++;
+                            }
+                        }
+
+                        if (availablePosition)
+                        {
+                            continue;
                         }
 
                         break;
-                    }
-                    else
-                    {
+                    case Enums.Direction.Left:
+                        if (IsValidBoardPosition(testMove.GetBoardState(), currentRow, currentColumn - 1) == 1)
+                        {
+                            currentColumn--;
+                            continue;
+                        }
                         break;
-                    }
+                    case Enums.Direction.Right:
+                        currentColumn++;
+                        bool availableHorizontalPosition = false;
+                        while (IsValidBoardPosition(testMove.GetBoardState(), currentRow, currentColumn) == 1)
+                        {
+                            var isPositionPlayable = IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn, false);
+                            if (isPositionPlayable == 1)
+                            {
+                                break;
+                            }
+                            else
+                            {
+                                currentColumn++;
+                            }
+                        }
+
+                        if (availableHorizontalPosition)
+                        {
+                            continue;
+                        }
+
+                        break;
                 }
+
+                break;
             }
 
             return null;
@@ -426,6 +514,27 @@ namespace ScrabbleSolver
             }
 
             return true;
+        }
+
+        private bool ValidateMovePosition(Move move)
+        {
+            bool validMove = false;
+            var board = move.GetInitialBoardState();
+            foreach (var changedPositions in move.GetChangedPositions())
+            {
+                // Check if adjacent to a tile
+                if ((changedPositions.Item2 > 0 && board[changedPositions.Item2 - 1, changedPositions.Item3] != ' ') ||
+                    (changedPositions.Item2 < 14 && board[changedPositions.Item2 + 1, changedPositions.Item3] != ' ') ||
+                    (changedPositions.Item3 > 0 && board[changedPositions.Item2, changedPositions.Item3 - 1] != ' ') ||
+                    (changedPositions.Item3 < 14 && board[changedPositions.Item2, changedPositions.Item3 + 1] != ' '))
+                {
+                    validMove = true;
+                    break;
+                }
+
+            }
+
+            return validMove;
         }
 
         //private bool ValidateWordSubstring(List<string> words)

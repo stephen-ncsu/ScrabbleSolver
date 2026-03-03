@@ -91,6 +91,11 @@ namespace ScrabbleSolver
                 score += newWord.GetPointValue(letterMultiplier, _letterValues);
             }
 
+            if(changedPositions.Count == 7)
+            {
+                score += 50; 
+            }
+
             return score;
         }
     }
