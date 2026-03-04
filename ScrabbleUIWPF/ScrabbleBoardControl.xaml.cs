@@ -97,7 +97,7 @@ namespace ScrabbleUIWPF
             {
                 for (int col = 0; col < 15; col++)
                 {
-                    var border = CreateSquare(row, col);
+                    var border = CreateSquare(col, row);
                     Grid.SetRow(border, row + 1);
                     Grid.SetColumn(border, col + 1);
                     BoardGrid.Children.Add(border);
@@ -105,10 +105,10 @@ namespace ScrabbleUIWPF
             }
         }
 
-        private Border CreateSquare(int row, int col)
+        private Border CreateSquare(int col, int row)
         {
             var border = new Border();
-            string key = $"{row},{col}";
+            string key = $"{col},{row}";
 
             // Set style based on square type
             if (_specialSquares.ContainsKey(key))
@@ -152,11 +152,11 @@ namespace ScrabbleUIWPF
                 var textBox = new TextBox
                 {
                     Style = (Style)FindResource("EmptyTileTextBox"),
-                    Tag = $"{row},{col}"
+                    Tag = $"{col},{row}"
                 };
                 textBox.TextChanged += TileTextBox_TextChanged;
                 
-                _tileTextBoxes[row, col] = textBox;
+                _tileTextBoxes[col, row] = textBox;
                 
                 grid.Children.Add(label);
                 grid.Children.Add(textBox);
@@ -173,7 +173,7 @@ namespace ScrabbleUIWPF
                 };
                 textBox.TextChanged += TileTextBox_TextChanged;
                 
-                _tileTextBoxes[row, col] = textBox;
+                _tileTextBoxes[col, row] = textBox;
                 border.Child = textBox;
             }
 
@@ -214,15 +214,15 @@ namespace ScrabbleUIWPF
             {
                 for (int col = 0; col < 15; col++)
                 {
-                    char tile = boardState[row, col];
-                    var textBox = _tileTextBoxes[row, col];
+                    char tile = boardState[col, row];
+                    var textBox = _tileTextBoxes[col, row];
 
                     if (tile != ' ' && tile != '\0')
                     {
                         textBox.Text = tile.ToString();
 
                         // Check if this position should be highlighted as unrecognized
-                        if (tile == '*' || (highlightedPositions != null && highlightedPositions.Contains((row, col))))
+                        if (tile == '*' || (highlightedPositions != null && highlightedPositions.Contains((col, row))))
                         {
                             textBox.Style = (Style)FindResource("UnrecognizedTileTextBox");
                         }
@@ -248,8 +248,8 @@ namespace ScrabbleUIWPF
             {
                 for (int col = 0; col < 15; col++)
                 {
-                    string text = _tileTextBoxes[row, col].Text;
-                    boardState[row, col] = string.IsNullOrWhiteSpace(text) ? ' ' : text[0];
+                    string text = _tileTextBoxes[col, row].Text;
+                    boardState[col, row] = string.IsNullOrWhiteSpace(text) ? ' ' : text[0];
                 }
             }
 
@@ -262,7 +262,7 @@ namespace ScrabbleUIWPF
             {
                 for (int col = 0; col < 15; col++)
                 {
-                    _tileTextBoxes[row, col].Text = string.Empty;
+                    _tileTextBoxes[col, row].Text = string.Empty;
                 }
             }
         }

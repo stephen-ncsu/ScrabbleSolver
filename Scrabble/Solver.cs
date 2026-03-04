@@ -21,6 +21,8 @@ namespace ScrabbleSolver
         private HashSet<string> _dictionarySubstringIndex;
         private List<Word> _baseWords;
         private List<char> _remainingLetters;
+        HashSet<char>[,] _eliminatedCharPositions = new HashSet<char>[15, 15];
+        HashSet<char>[,] _validatedCharPositions = new HashSet<char>[15, 15];
 
         public Solver(char[,] board, string rack)
         {
@@ -36,7 +38,6 @@ namespace ScrabbleSolver
             HashSet<char> usableCharacters = FindChars(baseWords, _remainingLetters);
 
             _dictionary = _dictionary.Where(word => word.All(c => usableCharacters.Contains(c))).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
             Serilog.Log.Logger.Information("Found words: " + String.Join(',', baseWords.Select(x=>x.Text).ToArray()));
             var errorWords = ValidateWords(baseWords);
             Serilog.Log.Logger.Information("Error words: " + String.Join(',', errorWords.Select(x=>x.Text).ToArray()));
@@ -47,103 +48,37 @@ namespace ScrabbleSolver
 
             _allPermutations = GenerateUniquePermutations(_remainingLetters);
 
-            //RemoveImpossiblePermuatations();
 
-            //List<object> possibleMoves = new List<object>();
             var playablePositions = GetPlayablePositions();
             var stopwatch = new Stopwatch();
 
-            for(int i = 0; i < playablePositions.GetLength(0); i++)
+            for(int column = 0; column < playablePositions.GetLength(0); column++)
             {
-                for(int j = 0; j < playablePositions.GetLength(1); j++)
+                for(int row = 0; row < playablePositions.GetLength(1); row++)
                 {
-                    if (playablePositions[i, j] == 1)
+                    if (playablePositions[column, row] == 1)
                     {
-                        if(_baseMove.GetBoardState()[i, j] != ' ')
+                        if(_baseMove.GetBoardState()[column, row] != ' ')
                         {
                             continue;
                         }
 
                         stopwatch.Restart();
-                        DetectImpossibleLetters(_remainingLetters, i, j);
+                        //DetectImpossibleLetters(_remainingLetters, column, row);
 
-                        var newMoves = GenerateMoves(i, j);
+                        var newMoves = GenerateMoves(column, row);
                         
                         if(newMoves.Any())
                         {
                             _possibleMoves.AddRange(newMoves);
                         }
                         stopwatch.Stop();
-                        Serilog.Log.Logger.Information($"Generated moves for position ({i}, {j}) in {stopwatch.ElapsedMilliseconds} ms. Total moves: {_possibleMoves.Count}");
+                        Serilog.Log.Logger.Information($"Generated moves for position ({column}, {row}) in {stopwatch.ElapsedMilliseconds} ms. Total moves: {_possibleMoves.Count}");
                     }
                 }
             }
 
             return _possibleMoves;
-        }
-
-        private void RemoveImpossiblePermuatations()
-        {
-            List<string> invalidSubstrings = new List<string>();
-            foreach(var permuatation in _allPermutations)
-            {
-                var subStringIndex = BuildSubstringIndex(new string(permuatation.ToArray()));
-
-                foreach(var substring in subStringIndex)
-                {
-                    if(_dictionarySubstringIndex.Contains(substring) == false)
-                    {
-                        if (invalidSubstrings.Contains(substring) == false)
-                        {
-                            invalidSubstrings.Add(substring);
-                        }
-                    }
-                }
-            }
-
-            foreach(var invalidSubstring in invalidSubstrings)
-            {
-                foreach (var permuatation in _allPermutations)
-                {
-                    int index = 0;
-                    int? subStringStartIndex = null;
-
-                    while (index < permuatation.Count)
-                    {
-                        if (permuatation[index] == invalidSubstring[0])
-                        {
-                            bool match = true;
-                            subStringStartIndex = index;
-                            for (int j = 1; j < invalidSubstring.Length; j++)
-                            {
-                                if (index + j >= permuatation.Count || permuatation[index + j] != invalidSubstring[j])
-                                {
-                                    match = false;
-                                    subStringStartIndex = null;
-                                    break;
-                                }
-                            }
-
-                            if (match)
-                            {
-                                break;
-                            }
-                        }
-                        index++;
-                    }
-
-                    if (subStringStartIndex != null)
-                    {
-                        for (int i = subStringStartIndex.Value + invalidSubstring.Length - 1; i < subStringStartIndex + invalidSubstring.Length; i++)
-                        {
-                            permuatation.RemoveAt(i);
-                        }
-                    }
-                }
-            }
-
-            _allPermutations = _allPermutations.Where(permutation => permutation.Count > 0).ToList();
-
         }
 
         private void DetectImpossibleLetters(List<char> letters, int row, int col)
@@ -152,7 +87,7 @@ namespace ScrabbleSolver
             foreach (var letter in letters)
             {
                 var testMove = new Move(_baseMove.GetBoardState().Duplicate());
-                testMove.AddNewLetter(letter, row, col);
+                testMove.AddNewLetter(letter, col, row);
                 var words = testMove.FindWords();
                 if (ValidateWordSubstring(words) == false)
                 {
@@ -218,16 +153,9 @@ namespace ScrabbleSolver
 
         private List<Word> ValidateWords(List<Word> words)
         {
-            if (words.Count > 100)
-            {
-                return words.AsParallel()
-                            .Where(word => !_dictionary.Contains(word.Text))
-                            .ToList();
-            }
-            else
-            {
-                return words.Where(word => !_dictionary.Contains(word.Text)).ToList();
-            }
+
+            return words.Where(word => !_dictionary.Contains(word.Text)).ToList();
+
         }
 
         private int[,] GetPlayablePositions()
@@ -293,13 +221,13 @@ namespace ScrabbleSolver
                 return 0;
             }
 
-            if (board[row, col] == ' ')
+            if (board[col, row] == ' ')
             {
                 // Check if adjacent to a tile
-                if (needsToBeAdjacent && ((row > 0 && board[row - 1, col] != ' ') ||
-                    (row < 14 && board[row + 1, col] != ' ') ||
-                    (col > 0 && board[row, col - 1] != ' ') ||
-                    (col < 14 && board[row, col + 1] != ' ')))
+                if (needsToBeAdjacent && ((row > 0 && board[col, row - 1] != ' ') ||
+                    (row < 14 && board[col, row + 1] != ' ') ||
+                    (col > 0 && board[col - 1, row] != ' ') ||
+                    (col < 14 && board[col + 1, row] != ' ')))
                 {
                     return 1;
                 }
@@ -323,34 +251,13 @@ namespace ScrabbleSolver
         }
 
 
-        private HashSet<Move> GenerateMoves(int startingRow, int startingColumn)
+        private HashSet<Move> GenerateMoves(int startingColumn, int startingRow)
         {
             HashSet<Move> moves = new HashSet<Move>();
 
             Move newMove = null;
 
             List<Enums.Direction> availableDirections = new List<Enums.Direction>();
-
-            //if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow + 1, startingColumn, false) == 1)
-            //{
-            //    availableDirections.Add(Enums.Direction.Down);
-            //}
-
-            //if(IsPositionPlayable(_baseMove.GetBoardState(), startingRow - 1, startingColumn, false) == 1)
-            //{
-            //    availableDirections.Add(Enums.Direction.Up);
-            //}
-
-            //if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn + 1, false) == 1)
-            //{
-            //    availableDirections.Add(Enums.Direction.Right);
-            //}
-
-            //if (IsPositionPlayable(_baseMove.GetBoardState(), startingRow, startingColumn - 1, false) == 1)
-            //{
-            //    availableDirections.Add(Enums.Direction.Left);
-            //}
-
 
             availableDirections.Add(Enums.Direction.Down);
             availableDirections.Add(Enums.Direction.Right);
@@ -384,18 +291,34 @@ namespace ScrabbleSolver
             //generate moves for letter set at position
             foreach (var letter in letters)
             {
-                //if(_impossibleLetters.Contains(letter))
-                //{
-                //    return null;
-                //}
+                if (_validatedCharPositions[currentColumn, currentRow] == null)
+                {
+                    _validatedCharPositions[currentColumn, currentRow] = new HashSet<char>();
+                }
 
-                testMove.AddNewLetter(letter, currentRow, currentColumn);
+                if (_eliminatedCharPositions[currentColumn, currentRow] == null)
+                {
+                    _eliminatedCharPositions[currentColumn, currentRow] = new HashSet<char>();
+                }
+
+                if (_eliminatedCharPositions[currentColumn, currentRow] != null && _eliminatedCharPositions[currentColumn, currentRow].Contains(letter))
+                {
+                    continue;
+                }
+
+                testMove.AddNewLetter(letter, currentColumn, currentRow);
 
                 if (ValidateMovePosition(testMove))
                 {
                     var currentWords = testMove.FindNewWords();
-                    if (ValidateWordSubstring(currentWords))
+                    var previouslyValidated = _validatedCharPositions[currentColumn, currentRow].Contains(letter);
+                    if (previouslyValidated || ValidateWordSubstring(currentWords))
                     {
+                        if (previouslyValidated == false)
+                        {
+                            _validatedCharPositions[currentColumn, currentRow].Add(letter);
+                        }
+
                         if (ValidateWords(currentWords).Any() == false)
                         {
                             if (skipCounter == 0)
@@ -407,6 +330,13 @@ namespace ScrabbleSolver
                             {
                                 skipCounter--;
                             }
+                        }
+                    }
+                    else
+                    {
+                        if (startingRow == currentRow && startingColumn == currentColumn)
+                        {
+                            _eliminatedCharPositions[currentColumn, currentRow].Add(letter);
                         }
                     }
                 }
@@ -467,6 +397,7 @@ namespace ScrabbleSolver
                             var isPositionPlayable = IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn, false);
                             if (isPositionPlayable == 1)
                             {
+                                availableHorizontalPosition = true;
                                 break;
                             }
                             else
@@ -489,33 +420,6 @@ namespace ScrabbleSolver
             return null;
         }
 
-        private bool ValidateBoardState(char[,] chars)
-        {
-            for (int row = 0; row < 15; row++)
-            {
-                for (int col = 0; col < 15; col++)
-                {
-                    if (chars[row, col] != ' ')
-                    {
-                        // Check if adjacent to a tile
-                        if ((row > 0 && chars[row - 1, col] != ' ') ||
-                            (row < 14 && chars[row + 1, col] != ' ') ||
-                            (col > 0 && chars[row, col - 1] != ' ') ||
-                            (col < 14 && chars[row, col + 1] != ' '))
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
-
-            return true;
-        }
-
         private bool ValidateMovePosition(Move move)
         {
             bool validMove = false;
@@ -536,29 +440,6 @@ namespace ScrabbleSolver
 
             return validMove;
         }
-
-        //private bool ValidateWordSubstring(List<string> words)
-        //{
-        //    foreach (var word in words)
-        //    {
-        //        bool foundSubstring = false;
-        //        foreach(var dictionaryItem in _dictionary)
-        //        {
-        //            if (dictionaryItem.Length > word.Length && dictionaryItem.Contains(word))
-        //            {
-        //                foundSubstring = true;
-        //                break;
-        //            }
-        //        }
-
-        //        if(foundSubstring == false)
-        //        {
-        //            return false;
-        //        }
-        //    }
-
-        //    return true;
-        //}
 
         private bool ValidateWordSubstring(List<Word> words)
         {

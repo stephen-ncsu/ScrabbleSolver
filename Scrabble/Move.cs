@@ -38,12 +38,12 @@ namespace ScrabbleSolver
             return _changedPositions;
         }
 
-        public void AddNewLetter(char letter, int row, int col)
+        public void AddNewLetter(char letter, int col, int row)
         {
             _dirtyCache = true;
-            _boardState[row, col] = letter;
+            _boardState[col, row] = letter;
 
-            _changedPositions.Add(new Tuple<char, int, int>(letter, row, col));
+            _changedPositions.Add(new Tuple<char, int, int>(letter, col, row));
         }
 
         public bool AreMovesEqual(Move comparedMove)
