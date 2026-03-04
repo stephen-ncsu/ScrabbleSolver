@@ -168,41 +168,53 @@ namespace ScrabbleSolver
                 {
                     for(int i = 0; i < _remainingLetters.Count; i++)
                     {
-                        if(row + i < 15 && boardState[row + i, col] != ' ')
+                        if(row + i < 15 && boardState[col, row + i] != ' ')
                         {
-                            positions[row, col] = 1;
+                            positions[col, row] = 1;
                             break;
                         }
 
-                        if (row + i < 15 && col + 1 < 15 && boardState[row + i, col + 1] != ' ')
+                        if (row + i + 1 < 15 && boardState[col, row + i + 1] != ' ')
                         {
-                            positions[row, col] = 1;
+                            positions[col, row] = 1;
                             break;
                         }
 
-                        if (row + i < 15 && col - 1 >= 0 && boardState[row + i, col - 1] != ' ')
+                        if (row + i < 15 && col + 1 < 15 && boardState[col + 1, row + i] != ' ')
                         {
-                            positions[row, col] = 1;
+                            positions[col, row] = 1;
+                            break;
+                        }
+
+                        if (row + i < 15 && col - 1 >= 0 && boardState[col - 1, row + i] != ' ')
+                        {
+                            positions[col, row] = 1;
                             break;
                         }
 
 
 
-                        if (col + i < 15 && boardState[row, col + i] != ' ')
+                        if (col + i < 15 && boardState[col + i, row] != ' ')
                         {
-                            positions[row, col] = 1;
+                            positions[col, row] = 1;
                             break;
                         }
 
-                        if (col + i < 15 && row + 1 < 15 && boardState[row + 1, col + i] != ' ')
+                        if (col + i < 15 && row + 1 < 15 && boardState[col + i, row + 1] != ' ')
                         {
-                            positions[row, col] = 1;
+                            positions[col, row] = 1;
                             break;
                         }
 
-                        if (col + i < 15 && row - 1 >= 0 && boardState[row - 1, col + i] != ' ')
+                        if (col + i < 15 && row - 1 >= 0 && boardState[col + i, row - 1] != ' ')
                         {
-                            positions[row, col] = 1;
+                            positions[col, row] = 1;
+                            break;
+                        }
+
+                        if (col + i + 1 < 15 && boardState[col + i + 1, row] != ' ')
+                        {
+                            positions[col, row] = 1;
                             break;
                         }
                     }
@@ -427,10 +439,10 @@ namespace ScrabbleSolver
             foreach (var changedPositions in move.GetChangedPositions())
             {
                 // Check if adjacent to a tile
-                if ((changedPositions.Item2 > 0 && board[changedPositions.Item2 - 1, changedPositions.Item3] != ' ') ||
-                    (changedPositions.Item2 < 14 && board[changedPositions.Item2 + 1, changedPositions.Item3] != ' ') ||
-                    (changedPositions.Item3 > 0 && board[changedPositions.Item2, changedPositions.Item3 - 1] != ' ') ||
-                    (changedPositions.Item3 < 14 && board[changedPositions.Item2, changedPositions.Item3 + 1] != ' '))
+                if ((changedPositions.Col > 0 && board[changedPositions.Col - 1, changedPositions.Row] != ' ') ||
+                    (changedPositions.Col < 14 && board[changedPositions.Col + 1, changedPositions.Row] != ' ') ||
+                    (changedPositions.Row > 0 && board[changedPositions.Col, changedPositions.Row - 1] != ' ') ||
+                    (changedPositions.Row < 14 && board[changedPositions.Col, changedPositions.Row + 1] != ' '))
                 {
                     validMove = true;
                     break;

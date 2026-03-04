@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Scrabble;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
@@ -12,13 +13,13 @@ namespace ScrabbleSolver
     {
         char[,] _initialBoardState;
         char[,] _boardState;
-        List<Tuple<char, int, int>> _changedPositions = new List<Tuple<char, int, int>>();
+        List<Position> _changedPositions = new List<Position>();
 
         public Move(char[,] boardState)
         {
             _boardState = boardState.Duplicate();
             _initialBoardState = boardState.Duplicate();
-            _changedPositions = new List<Tuple<char, int, int>>();
+            _changedPositions = new List<Position>();
         }
 
         public int Score { get; set; }
@@ -33,7 +34,7 @@ namespace ScrabbleSolver
             return _initialBoardState;
         }
 
-        public List<Tuple<char, int, int>> GetChangedPositions()
+        public List<Position> GetChangedPositions()
         {
             return _changedPositions;
         }
@@ -43,7 +44,7 @@ namespace ScrabbleSolver
             _dirtyCache = true;
             _boardState[col, row] = letter;
 
-            _changedPositions.Add(new Tuple<char, int, int>(letter, col, row));
+            _changedPositions.Add(new Position(col, row, letter));
         }
 
         public bool AreMovesEqual(Move comparedMove)
@@ -53,33 +54,19 @@ namespace ScrabbleSolver
                 return false;
             }
 
-            var comparedMoveChangedPositions = comparedMove.GetChangedPositions();
-            var myChangedPositions = this.GetChangedPositions();
-            if(CompareTuples(comparedMoveChangedPositions, myChangedPositions))
+            var comparedMoveChangedPositions = comparedMove.GetChangedPositions().OrderBy(x => x.Row).ThenBy(x => x.Col);
+            var myChangedPositions = this.GetChangedPositions().OrderBy(x=>x.Row).ThenBy(x=>x.Col);
+
+            if(comparedMoveChangedPositions.Count() != myChangedPositions.Count())
             {
-                return true;
-            }
-
-            return false;
-        }
-
-        public bool CompareTuples(List<Tuple<char, int, int>> list1, List<Tuple<char, int, int>> list2)
-        {
-            if (list1.Count != list2.Count)
                 return false;
-
-            for (int i = 0; i < list1.Count; i++)
-            {
-                if (list1[i].Item1 != list2[i].Item1 || list1[i].Item2 != list2[i].Item2 || list1[i].Item3 != list2[i].Item3)
-                    return false;
             }
 
-            for (int i = 0; i < list2.Count; i++)
+            for (int i = 0; i < comparedMoveChangedPositions.Count(); i++)
             {
-                if (list1[i].Item1 != list2[i].Item1 || list1[i].Item2 != list2[i].Item2 || list1[i].Item3 != list2[i].Item3)
+                if (comparedMoveChangedPositions.ElementAt(i).Equals(myChangedPositions.ElementAt(i)) == false)
                     return false;
             }
-
 
             return true;
         }
@@ -99,9 +86,9 @@ namespace ScrabbleSolver
                 int hash = 17;
                 foreach (var position in _changedPositions)
                 {
-                    hash = hash * 31 + position.Item1.GetHashCode();
-                    hash = hash * 31 + position.Item2.GetHashCode();
-                    hash = hash * 31 + position.Item3.GetHashCode();
+                    hash = hash * 31 + position.Col.GetHashCode();
+                    hash = hash * 31 + position.Row.GetHashCode();
+                    hash = hash * 31 + position.Letter.GetHashCode();
                 }
                 return hash;
             }
@@ -129,16 +116,16 @@ namespace ScrabbleSolver
             {
                 for (int currentColumn = 0; currentColumn < boardSize; currentColumn++)
                 {
-                    char tile = board[currentRow, currentColumn];
+                    char tile = board[currentColumn, currentRow];
                     if (tile != ' ')
                     {
                         // Check horizontally
-                        if (currentColumn == 0 || board[currentRow, currentColumn - 1] == ' ')
+                        if (currentColumn == 0 || board[currentColumn - 1, currentRow] == ' ')
                         {
                             int columnPointer = currentColumn;
                             int wordLength = 0;
 
-                            while (columnPointer < boardSize && board[currentRow, columnPointer] != ' ')
+                            while (columnPointer < boardSize && board[columnPointer, currentRow] != ' ')
                             {
                                 columnPointer++;
                                 wordLength++;
@@ -151,9 +138,9 @@ namespace ScrabbleSolver
 
                                 for (int col = currentColumn; col < currentColumn + wordLength; col++)
                                 {
-                                    char letter = board[currentRow, col];
+                                    char letter = board[col, currentRow];
                                     word.WordBuilder.Append(letter);
-                                    word.Positions.Add(new Tuple<char, int, int>(letter, currentRow, col));
+                                    word.Positions.Add(new Position(col, currentRow, letter));
                                 }
 
                                 word.Lock();
@@ -162,12 +149,12 @@ namespace ScrabbleSolver
                         }
 
                         // Check vertically
-                        if (currentRow == 0 || board[currentRow - 1, currentColumn] == ' ')
+                        if (currentRow == 0 || board[currentColumn, currentRow - 1] == ' ')
                         {
                             int rowPointer = currentRow;
                             int wordLength = 0;
 
-                            while (rowPointer < boardSize && board[rowPointer, currentColumn] != ' ')
+                            while (rowPointer < boardSize && board[currentColumn, rowPointer] != ' ')
                             {
                                 rowPointer++;
                                 wordLength++;
@@ -180,9 +167,9 @@ namespace ScrabbleSolver
 
                                 for (int row = currentRow; row < currentRow + wordLength; row++)
                                 {
-                                    char letter = board[row, currentColumn];
+                                    char letter = board[currentColumn, row];
                                     word.WordBuilder.Append(letter);
-                                    word.Positions.Add(new Tuple<char, int, int>(letter, row, currentColumn));
+                                    word.Positions.Add(new Position(currentColumn, row, letter));
                                 }
 
                                 word.Lock();

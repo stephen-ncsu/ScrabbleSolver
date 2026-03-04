@@ -74,13 +74,13 @@ namespace ScrabbleSolver
                 int letterIndex = 0;
                 foreach (var wordPosition in newWord.Positions)
                 {
-                    var positionOfNewLetter = changedPositions.SingleOrDefault(x => x.Item2 == wordPosition.Item2 && x.Item3 == wordPosition.Item3);
+                    var positionOfNewLetter = changedPositions.SingleOrDefault(x => x.Col == wordPosition.Col && x.Row == wordPosition.Row);
                     
                     Enums.ScoreModifier scoringModifier = Enums.ScoreModifier.None;
 
                     if (positionOfNewLetter != null)
                     {
-                        scoringModifier = scoringBoard[positionOfNewLetter.Item2, positionOfNewLetter.Item3];
+                        scoringModifier = scoringBoard[positionOfNewLetter.Col, positionOfNewLetter.Row];
                     }
 
                     letterMultiplier.Add(letterIndex, scoringModifier);

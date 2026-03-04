@@ -195,7 +195,7 @@ namespace ScrabbleSolver
 
                 moveId.Text = "0";
                 movesTextBox.Text += $"\nBest Move Score: {_moves[0].Score}";
-                movesTextBox.Text += "\nChanged Positions: " + string.Join(", ", _moves[0].GetChangedPositions().Select(pos => $"{pos.Item1} at ({pos.Item2 + 1}, {pos.Item3 + 1})"));
+                movesTextBox.Text += "\nChanged Positions: " + string.Join(", ", _moves[0].GetChangedPositions().Select(pos => $"{pos.Letter} at ({pos.Col + 1}, {pos.Row + 1})"));
             }
             else
             {

@@ -50,13 +50,27 @@
 
         <!-- Top Control Panel -->
         <GroupBox Grid.Row="0" Header="Controls" Grid.ColumnSpan="3">
-            <!-- File Selection Row -->
-            <StackPanel Orientation="Horizontal" Grid.Row="0">
-                <Button x:Name="BrowseButton" Content="📁 Browse Image" Click="BrowseButton_Click" MinWidth="150" Height="35"/>
-                <Label Content="Selected File:" VerticalAlignment="Center"/>
-                <TextBox x:Name="FilePathTextBox" IsReadOnly="True" MinWidth="300" VerticalAlignment="Center"/>
-                <Button x:Name="ProcessButton" Content="🔍 Process Image" Click="ProcessButton_Click" MinWidth="150" Height="35"/>
-            </StackPanel>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- File Selection Row -->
+                <StackPanel Orientation="Horizontal" Grid.Row="0">
+                    <Button x:Name="BrowseButton" Content="📁 Browse Image" Click="BrowseButton_Click" MinWidth="150" Height="35"/>
+                    <Label Content="Selected File:" VerticalAlignment="Center"/>
+                    <TextBox x:Name="FilePathTextBox" IsReadOnly="True" MinWidth="300" VerticalAlignment="Center"/>
+                    <Button x:Name="ProcessButton" Content="🔍 Process Image" Click="ProcessButton_Click" MinWidth="150" Height="35"/>
+                </StackPanel>
+
+                <!-- Save/Load Row -->
+                <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,5,0,0">
+                    <Button x:Name="SaveBoardButton" Content="💾 Save Board" Click="SaveBoardButton_Click" MinWidth="120" Height="35" Background="#4CAF50" Foreground="White" Margin="5,0"/>
+                    <Button x:Name="LoadBoardButton" Content="📂 Load Board" Click="LoadBoardButton_Click" MinWidth="120" Height="35" Background="#2196F3" Foreground="White" Margin="5,0"/>
+                    <TextBlock x:Name="BoardFileLabel" VerticalAlignment="Center" Margin="10,0" Foreground="Gray" FontStyle="Italic"/>
+                </StackPanel>
+            </Grid>
         </GroupBox>
 
         <!-- Left Panel - Current Board -->
@@ -82,6 +96,7 @@
             <StackPanel Orientation="Vertical" Margin="10" VerticalAlignment="Center">
                 <Button x:Name="SolveButton" Content="🎯 Solve" Click="SolveButton_Click" MinWidth="120" Margin="5" Height="35"/>
                 <Button x:Name="CalculateButton" Content="📊 Calculate Scores" Click="CalculateButton_Click" MinWidth="150" Margin="5" Height="35"/>
+                <Button x:Name="ClearButton" Content="🗑 Clear Board" Click="ClearButton_Click" MinWidth="120" Margin="5" Height="35" Background="#FF6B6B" Foreground="White"/>
             </StackPanel>
         </StackPanel>
 
