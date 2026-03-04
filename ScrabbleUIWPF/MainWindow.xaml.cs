@@ -434,6 +434,63 @@ namespace ScrabbleUIWPF
             }
         }
 
+        private void ShowPlayablePositionsCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (CurrentBoardControl == null || RackControl == null)
+                return;
+
+            if (ShowPlayablePositionsCheckBox.IsChecked == true)
+            {
+                try
+                {
+                    var currentBoard = CurrentBoardControl.GetBoardState();
+                    var rackString = RackControl.GetRackString();
+
+                    if (string.IsNullOrWhiteSpace(rackString))
+                    {
+                        MessageBox.Show("Please add tiles to your rack to see playable positions.", "No Rack",
+                            MessageBoxButton.OK, MessageBoxImage.Information);
+                        ShowPlayablePositionsCheckBox.IsChecked = false;
+                        return;
+                    }
+
+                    // Use Solver to calculate playable positions
+                    var solver = new Solver(currentBoard, rackString);
+                    var playablePositions = solver.GetPlayablePositionsDebug(currentBoard, rackString);
+
+                    // Highlight on the board
+                    CurrentBoardControl.ShowPlayablePositions(playablePositions);
+
+                    // Count playable positions
+                    int count = 0;
+                    for (int i = 0; i < 15; i++)
+                    {
+                        for (int j = 0; j < 15; j++)
+                        {
+                            if (playablePositions[i, j] != Enums.Direction.None && currentBoard[i, j] == ' ')
+                                count++;
+                        }
+                    }
+
+                    StatusTextBlock.Text = $"🔍 Debug Mode: Showing {count} playable positions (yellow highlights)";
+                    StatusTextBlock.Foreground = new SolidColorBrush(Colors.Orange);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error calculating playable positions: {ex.Message}", "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    ShowPlayablePositionsCheckBox.IsChecked = false;
+                }
+            }
+            else
+            {
+                // Clear the highlights
+                CurrentBoardControl.ClearPlayablePositions();
+                StatusTextBlock.Text = "Playable positions cleared.";
+                StatusTextBlock.Foreground = new SolidColorBrush(Colors.Gray);
+            }
+        }
+
         private int CountUnrecognizedTiles(char[,] boardState, char[] rackState)
         {
             int count = 0;

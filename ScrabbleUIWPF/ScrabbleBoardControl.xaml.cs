@@ -1,3 +1,4 @@
+using ScrabbleSolver;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -263,6 +264,43 @@ namespace ScrabbleUIWPF
                 for (int col = 0; col < 15; col++)
                 {
                     _tileTextBoxes[col, row].Text = string.Empty;
+                }
+            }
+        }
+
+        public void ShowPlayablePositions(Enums.Direction[,] playablePositions)
+        {
+            if (playablePositions.GetLength(0) != 15 || playablePositions.GetLength(1) != 15)
+                return;
+
+            for (int col = 0; col < 15; col++)
+            {
+                for (int row = 0; row < 15; row++)
+                {
+                    var textBox = _tileTextBoxes[col, row];
+
+                    // Only highlight empty squares that are playable
+                    if (string.IsNullOrWhiteSpace(textBox.Text) && playablePositions[col, row] != Enums.Direction.None)
+                    {
+                        textBox.Style = (Style)FindResource("PlayablePositionTextBox");
+                    }
+                }
+            }
+        }
+
+        public void ClearPlayablePositions()
+        {
+            for (int row = 0; row < 15; row++)
+            {
+                for (int col = 0; col < 15; col++)
+                {
+                    var textBox = _tileTextBoxes[col, row];
+
+                    // Reset empty squares back to normal style
+                    if (string.IsNullOrWhiteSpace(textBox.Text))
+                    {
+                        textBox.Style = (Style)FindResource("EmptyTileTextBox");
+                    }
                 }
             }
         }

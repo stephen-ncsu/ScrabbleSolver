@@ -28,10 +28,10 @@ namespace ScrabbleSolver
     {
         public enum  Direction
         {
-            Up,
+            None,
             Down,
-            Left,
-            Right
+            Right,
+            All
         }
 
         public enum ScoreModifier

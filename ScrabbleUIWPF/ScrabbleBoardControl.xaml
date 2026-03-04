@@ -83,6 +83,13 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
+
+        <!-- Playable Position TextBox Style (for debug mode) -->
+        <Style x:Key="PlayablePositionTextBox" TargetType="TextBox" BasedOn="{StaticResource EmptyTileTextBox}">
+            <Setter Property="Background" Value="#FFEB3B"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BorderBrush" Value="#FFA000"/>
+        </Style>
         
         <!-- Header Label Style -->
         <Style x:Key="HeaderLabel" TargetType="TextBlock">

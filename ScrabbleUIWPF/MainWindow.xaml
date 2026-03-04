@@ -97,6 +97,11 @@
                 <Button x:Name="SolveButton" Content="🎯 Solve" Click="SolveButton_Click" MinWidth="120" Margin="5" Height="35"/>
                 <Button x:Name="CalculateButton" Content="📊 Calculate Scores" Click="CalculateButton_Click" MinWidth="150" Margin="5" Height="35"/>
                 <Button x:Name="ClearButton" Content="🗑 Clear Board" Click="ClearButton_Click" MinWidth="120" Margin="5" Height="35" Background="#FF6B6B" Foreground="White"/>
+                <CheckBox x:Name="ShowPlayablePositionsCheckBox" Content="🔍 Show Playable Positions" 
+                          Margin="5" FontSize="12" 
+                          Checked="ShowPlayablePositionsCheckBox_Changed"
+                          Unchecked="ShowPlayablePositionsCheckBox_Changed"
+                          ToolTip="Debug mode: Highlights squares where the solver can place tiles"/>
             </StackPanel>
         </StackPanel>
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static IronOcr.OcrResult;
 
@@ -48,15 +49,16 @@ namespace ScrabbleSolver
 
             _allPermutations = GenerateUniquePermutations(_remainingLetters);
 
+            var length = GetLongestPossibleWordWithCharacters(_remainingLetters);
 
-            var playablePositions = GetPlayablePositions();
+            var playablePositions = GetPlayablePositions(length);
             var stopwatch = new Stopwatch();
 
             for(int column = 0; column < playablePositions.GetLength(0); column++)
             {
                 for(int row = 0; row < playablePositions.GetLength(1); row++)
                 {
-                    if (playablePositions[column, row] == 1)
+                    if (playablePositions[column, row] != Enums.Direction.None)
                     {
                         if(_baseMove.GetBoardState()[column, row] != ' ')
                         {
@@ -66,12 +68,34 @@ namespace ScrabbleSolver
                         stopwatch.Restart();
                         //DetectImpossibleLetters(_remainingLetters, column, row);
 
-                        var newMoves = GenerateMoves(column, row);
-                        
-                        if(newMoves.Any())
+                        if(playablePositions[column, row] == Enums.Direction.All)
                         {
-                            _possibleMoves.AddRange(newMoves);
+                            Serilog.Log.Logger.Information($"Generating moves for position ({column}, {row}) in both directions.");
+                            var downMoves = GenerateMoves(column, row, Enums.Direction.Down);
+                            var rightMoves = GenerateMoves(column, row, Enums.Direction.Right);
+                            if(downMoves.Any())
+                            {
+                                _possibleMoves.AddRange(downMoves);
+                            }
+                            if(rightMoves.Any())
+                            {
+                                _possibleMoves.AddRange(rightMoves);
+                            }
                         }
+                        else
+                        {
+                            Serilog.Log.Logger.Information($"Generating moves for position ({column}, {row}) in the {playablePositions[column, row]} direction");
+
+                            var newMoves = GenerateMoves(column, row, playablePositions[column, row]);
+
+                            if (newMoves.Any())
+                            {
+                                _possibleMoves.AddRange(newMoves);
+                            }
+                        }
+
+
+
                         stopwatch.Stop();
                         Serilog.Log.Logger.Information($"Generated moves for position ({column}, {row}) in {stopwatch.ElapsedMilliseconds} ms. Total moves: {_possibleMoves.Count}");
                     }
@@ -79,6 +103,38 @@ namespace ScrabbleSolver
             }
 
             return _possibleMoves;
+        }
+
+        private int GetLongestPossibleWordWithCharacters(List<char> remainingLetters)
+        {
+            if (remainingLetters == null || remainingLetters.Count == 0)
+                return 0;
+
+            // Build regex pattern with positive lookaheads for each letter
+            // Example: for letters [L,E,T] -> "^(?=.*L)(?=.*E)(?=.*T).*$"
+            StringBuilder patternBuilder = new StringBuilder("^");
+            foreach (var letter in remainingLetters)
+            {
+                patternBuilder.Append($"(?=.*{char.ToUpper(letter)})");
+            }
+            patternBuilder.Append(".*$");
+
+            Regex regex = new Regex(patternBuilder.ToString(), RegexOptions.IgnoreCase);
+
+            int longestLength = 0;
+
+            // Read dictionary line by line and find longest matching word
+            foreach (string word in File.ReadLines("myDictionary.txt"))
+            {
+                if (regex.IsMatch(word))
+                {
+                    longestLength = Math.Max(longestLength, word.Length);
+                }
+            }
+
+            Serilog.Log.Logger.Information($"Longest possible word with characters {string.Join("", remainingLetters)}: {longestLength} letters");
+
+            return longestLength;
         }
 
         private void DetectImpossibleLetters(List<char> letters, int row, int col)
@@ -158,64 +214,122 @@ namespace ScrabbleSolver
 
         }
 
-        private int[,] GetPlayablePositions()
+        private Enums.Direction[,] GetPlayablePositions(int maxLength)
         {
-            int[,] positions = new int[15, 15];
+            if(maxLength > 7)
+            {
+                maxLength = 7;
+            }
+
+            if(maxLength == 0)
+            {
+                maxLength = 6;
+            }
+
+            Enums.Direction[,] positions = new Enums.Direction[15, 15];
             var boardState = _baseMove.GetBoardState();
             for (int row = 0; row < 15; row++)
             {
                 for (int col = 0; col < 15; col++)
                 {
-                    for(int i = 0; i < _remainingLetters.Count; i++)
+                    for(int i = 0; i < maxLength; i++)
                     {
                         if(row + i < 15 && boardState[col, row + i] != ' ')
                         {
-                            positions[col, row] = 1;
-                            break;
+                            if (positions[col, row] == Enums.Direction.None)
+                            {
+                                positions[col, row] = Enums.Direction.Down;
+                            }
+                            else
+                            {
+                                positions[col, row] = Enums.Direction.All;
+                            }
                         }
 
                         if (row + i + 1 < 15 && boardState[col, row + i + 1] != ' ')
                         {
-                            positions[col, row] = 1;
-                            break;
+                            if (positions[col, row] == Enums.Direction.None)
+                            {
+                                positions[col, row] = Enums.Direction.Down;
+                            }
+                            else
+                            {
+                                positions[col, row] = Enums.Direction.All;
+                            }
                         }
 
                         if (row + i < 15 && col + 1 < 15 && boardState[col + 1, row + i] != ' ')
                         {
-                            positions[col, row] = 1;
-                            break;
+                            if (positions[col, row] == Enums.Direction.None)
+                            {
+                                positions[col, row] = Enums.Direction.Down;
+                            }
+                            else
+                            {
+                                positions[col, row] = Enums.Direction.All;
+                            }
                         }
 
                         if (row + i < 15 && col - 1 >= 0 && boardState[col - 1, row + i] != ' ')
                         {
-                            positions[col, row] = 1;
-                            break;
+                            if (positions[col, row] == Enums.Direction.None)
+                            {
+                                positions[col, row] = Enums.Direction.Down;
+                            }
+                            else
+                            {
+                                positions[col, row] = Enums.Direction.All;
+                            }
                         }
 
 
 
                         if (col + i < 15 && boardState[col + i, row] != ' ')
                         {
-                            positions[col, row] = 1;
-                            break;
+                            if (positions[col, row] == Enums.Direction.None)
+                            {
+                                positions[col, row] = Enums.Direction.Right;
+                            }
+                            else
+                            {
+                                positions[col, row] = Enums.Direction.All;
+                            }
                         }
 
                         if (col + i < 15 && row + 1 < 15 && boardState[col + i, row + 1] != ' ')
                         {
-                            positions[col, row] = 1;
-                            break;
+                            if (positions[col, row] == Enums.Direction.None)
+                            {
+                                positions[col, row] = Enums.Direction.Right;
+                            }
+                            else
+                            {
+                                positions[col, row] = Enums.Direction.All;
+                            }
                         }
 
                         if (col + i < 15 && row - 1 >= 0 && boardState[col + i, row - 1] != ' ')
                         {
-                            positions[col, row] = 1;
-                            break;
+                            if (positions[col, row] == Enums.Direction.None)
+                            {
+                                positions[col, row] = Enums.Direction.Right;
+                            }
+                            else
+                            {
+                                positions[col, row] = Enums.Direction.All;
+                            }
                         }
 
                         if (col + i + 1 < 15 && boardState[col + i + 1, row] != ' ')
                         {
-                            positions[col, row] = 1;
-                            break;
+                            if (positions[col, row] == Enums.Direction.None)
+                            {
+                                positions[col, row] = Enums.Direction.Right;
+                            }
+                            else
+                            {
+                                positions[col, row] = Enums.Direction.All;
+                            }
                         }
                     }
                 }
@@ -223,6 +337,14 @@ namespace ScrabbleSolver
 
 
             return positions;
+        }
+
+        public Enums.Direction[,] GetPlayablePositionsDebug(char[,] board, string rack)
+        {
+            _baseMove = new Move(board);
+            _remainingLetters = rack.ToCharArray().ToList();
+            var maxLength = GetLongestPossibleWordWithCharacters(_remainingLetters);
+            return GetPlayablePositions(maxLength);
         }
 
 
@@ -263,33 +385,27 @@ namespace ScrabbleSolver
         }
 
 
-        private HashSet<Move> GenerateMoves(int startingColumn, int startingRow)
+        private HashSet<Move> GenerateMoves(int startingColumn, int startingRow, Enums.Direction direction)
         {
             HashSet<Move> moves = new HashSet<Move>();
 
             Move newMove = null;
 
-            List<Enums.Direction> availableDirections = new List<Enums.Direction>();
-
-            availableDirections.Add(Enums.Direction.Down);
-            availableDirections.Add(Enums.Direction.Right);
-            foreach (var direction in availableDirections)
+            foreach (var permutation in _allPermutations)
             {
-                foreach (var permutation in _allPermutations)
+                int skipCounter = 0;
+                do
                 {
-                    int skipCounter = 0;
-                    do
-                    {
-                        newMove = GenerateMove(permutation, startingRow, startingColumn, direction, skipCounter);
+                    newMove = GenerateMove(permutation, startingRow, startingColumn, direction, skipCounter);
 
-                        if (newMove != null)
-                        {
-                            moves.Add(newMove);
-                            skipCounter++;
-                        }
-                    } while (newMove != null);
-                }
+                    if (newMove != null)
+                    {
+                        moves.Add(newMove);
+                        skipCounter++;
+                    }
+                } while (newMove != null);
             }
+
 
             return moves;
         }
@@ -355,22 +471,6 @@ namespace ScrabbleSolver
 
                 switch (direction)
                 {
-                    case Enums.Direction.Up:
-                        currentRow--;
-                        while (IsValidBoardPosition(testMove.GetBoardState(), currentRow, currentColumn) == 1)
-                        {
-                            var isPositionPlayable = IsPositionPlayable(testMove.GetBoardState(), currentRow, currentColumn, false);
-                            if (isPositionPlayable == 1)
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                currentRow--;
-                            }
-                        }
-
-                        return null;
                     case Enums.Direction.Down:
                         currentRow++;
                         bool availablePosition = false;
@@ -393,13 +493,6 @@ namespace ScrabbleSolver
                             continue;
                         }
 
-                        break;
-                    case Enums.Direction.Left:
-                        if (IsValidBoardPosition(testMove.GetBoardState(), currentRow, currentColumn - 1) == 1)
-                        {
-                            currentColumn--;
-                            continue;
-                        }
                         break;
                     case Enums.Direction.Right:
                         currentColumn++;
