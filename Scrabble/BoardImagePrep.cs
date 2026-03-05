@@ -421,14 +421,14 @@ namespace ScrabbleSolver
                     if (detected == "?")
                     {
                         // Save a copy of the cell image for user review
-                        _unrecognizedTileImages[(row, col)] = cell.Clone();
+                        _unrecognizedTileImages[(col, row)] = cell.Clone();
                     }
 
-                    _boardState[row, col] = detected[0];
+                    _boardState[col, row] = detected[0];
                 }
                 else
                 {
-                    _boardState[row, col] = ' '; // Empty square
+                    _boardState[col, row] = ' '; // Empty square
                 }
             }
         }

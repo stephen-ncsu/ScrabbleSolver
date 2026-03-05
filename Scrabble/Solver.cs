@@ -438,7 +438,8 @@ namespace ScrabbleSolver
 
                 if (ValidateMovePosition(testMove))
                 {
-                    var currentWords = testMove.FindNewWords();
+                    //var currentWords = testMove.FindNewWords();
+                    var currentWords = testMove.FindNewWordsNew();
                     var previouslyValidated = _validatedCharPositions[currentColumn, currentRow].Contains(letter);
                     if (previouslyValidated || ValidateWordSubstring(currentWords))
                     {

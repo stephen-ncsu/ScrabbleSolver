@@ -65,7 +65,8 @@ namespace ScrabbleSolver
         {
             int score = 0;
             var boardState = move.GetBoardState();
-            var newWords = move.FindNewWords();
+            //var newWords = move.FindNewWords();
+            var newWords = move.FindNewWordsNew();
             var changedPositions = move.GetChangedPositions();
 
             foreach(var newWord in newWords)
@@ -93,7 +94,7 @@ namespace ScrabbleSolver
 
             if(changedPositions.Count == 7)
             {
-                score += 50; 
+                score += 40; 
             }
 
             return score;

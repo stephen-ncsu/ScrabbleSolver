@@ -6,6 +6,7 @@ using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static IronOcr.OcrResult;
 
 namespace ScrabbleSolver
 {
@@ -183,13 +184,88 @@ namespace ScrabbleSolver
             return words;
         }
 
-        public List<Word> FindNewWords()
+        //public List<Word> FindNewWords()
+        //{
+        //    var oldWords = FindWords(_initialBoardState);
+        //    var newWords = FindWords();
+
+
+        //    return newWords.Except(oldWords, new WordComparer()).ToList();
+        //}
+
+        public List<Word> FindNewWordsNew()
         {
-            var oldWords = FindWords(_initialBoardState);
-            var newWords = FindWords();
+            List<Position> horizontalPositionsScanned = new List<Position>();
+            List<Position> verticalPositionsScanned = new List<Position>();
+            List<Word> newWords = new List<Word>();
+            foreach(var position in _changedPositions)
+            {
+                if (((position.Col + 1 < 15 && _boardState[position.Col + 1, position.Row] != ' ') || (position.Col > 0 && _boardState[position.Col - 1, position.Row] != ' '))
+                    && horizontalPositionsScanned.Contains(position) == false)
+                {
+
+                    Word newWord = new Word();
+                    int startingColumn = position.Col;
+                    int endColumn = position.Col;
+                    for(int i=position.Col; i >= 0 && _boardState[i, position.Row] != ' '; i--)
+                    {
+                        //find the beginning of the Word;
+                        startingColumn = i;
+                    }
+
+                    for (int i = position.Col; i < 15 && _boardState[i, position.Row] != ' '; i++)
+                    {
+                        //find the end of the Word;
+                        endColumn = i;
+                    }
+
+                    for(int i = startingColumn; i <= endColumn; i++)
+                    {
+                        newWord.WordBuilder.Append(_boardState[i, position.Row]);
+                        var wordposition = new Position(i, position.Row, _boardState[i, position.Row]);
+                        newWord.Positions.Add(wordposition);
+                        horizontalPositionsScanned.Add(wordposition);
+                    }
+
+                    newWord.Lock();
+
+                    newWords.Add(newWord);
+                }
+
+                if (((position.Row + 1 < 15 && _boardState[position.Col, position.Row + 1] != ' ') || (position.Row > 0 && _boardState[position.Col, position.Row - 1] != ' '))
+                    && verticalPositionsScanned.Contains(position) == false)
+                {
+                    Word newWord = new Word();
+                    int startingRow = position.Row;
+                    int endRow = position.Row;
+                    for (int i = position.Row; i >= 0 && _boardState[position.Col, i] != ' '; i--)
+                    {
+                        //find the beginning of the Word;
+                        startingRow = i;
+                    }
+
+                    for (int i = position.Row; i < 15 && _boardState[position.Col, i] != ' '; i++)
+                    {
+                        //find the end of the Word;
+                        endRow = i;
+                    }
+
+                    for (int i = startingRow; i <= endRow; i++)
+                    {
+                        newWord.WordBuilder.Append(_boardState[position.Col, i]);
+                        var wordPosition = new Position(position.Col, i, _boardState[position.Col, i]);
+                        newWord.Positions.Add(wordPosition);
+                        verticalPositionsScanned.Add(wordPosition);
+                    }
+
+                    newWord.Lock();
+
+                    newWords.Add(newWord);
+                }
+            }
 
 
-            return newWords.Except(oldWords, new WordComparer()).ToList();
+            return newWords.Distinct().ToList();
         }
 
         public bool AreCharArraysEqual(char[,] array1, char[,] array2)
